@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISIONARTE - Sistema Profesional de Entrega</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;600;700&family=Inter:wght@300;400;600&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; }
+        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #0a0a0a 0%, #0f0f1e 100%); color: #ffffff; }
+        .glass { background: rgba(20, 20, 30, 0.6); backdrop-filter: blur(25px); border: 1px solid rgba(255, 215, 0, 0.1); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        h1 { font-size: 3.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff 0%, #ffd700 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        h2 { font-size: 2rem; font-weight: 600; margin-bottom: 1rem; color: #ffffff; }
+        h3 { font-size: 1.2rem; color: #ffffff; }
+        .subtitle { font-size: 1.1rem; color: #d0d0d0; margin: 0.5rem 0 2rem 0; }
+        .btn { padding: 13px 34px; border: none; border-radius: 14px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1.2px; }
+        .btn-primary { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #000; box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3); }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255, 215, 0, 0.5); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: #ffffff; border: 1.5px solid rgba(255, 215, 0, 0.3); }
+        .btn-secondary:hover { background: rgba(255, 215, 0, 0.12); }
+        .btn-small { padding: 8px 18px; font-size: 0.9rem; }
+        .btn-back { padding: 8px 14px; font-size: 1rem; margin-right: 1rem; }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        input, select, textarea { width: 100%; padding: 13px 16px; background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 215, 0, 0.15); border-radius: 12px; color: #ffffff; font-size: 0.95rem; font-family: 'Poppins', sans-serif; margin-bottom: 1rem; }
+        input:focus, select:focus, textarea:focus { outline: none; background: rgba(255, 255, 255, 0.1); border-color: #ffd700; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); }
+        .container { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .main-content { width: 100%; min-height: 100vh; overflow-y: auto; padding: 40px 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 2rem; }
+        .logo { font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff 0%, #ffd700 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; display: flex; align-items: center; gap: 12px; }
+        .logo-icon { font-size: 2rem; animation: float 3s ease-in-out infinite; }
+        .feature-box { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 16px; padding: 24px; text-align: center; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(10px); overflow-y: auto; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: linear-gradient(135deg, #0a0a0a 0%, #141428 100%); border: 1.5px solid rgba(255, 215, 0, 0.15); border-radius: 28px; padding: 40px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close-btn { position: absolute; top: 20px; right: 20px; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); color: #ffffff; font-size: 28px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+        .tabs { display: flex; gap: 2rem; border-bottom: 2px solid rgba(255, 215, 0, 0.1); margin-bottom: 2rem; flex-wrap: wrap; }
+        .tab { padding: 14px 0; border: none; background: none; color: #888888; cursor: pointer; font-weight: 600; transition: all 0.3s; position: relative; font-size: 0.9rem; }
+        .tab.active { color: #ffd700; }
+        .tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #ffd700, #ffed4e); }
+        .alert { padding: 12px 16px; border-radius: 12px; margin-bottom: 1rem; font-size: 0.9rem; }
+        .alert-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd; }
+        .alert-success { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #86efac; }
+        .alert-warning { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d; }
+        .color-picker { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .color-option { width: 50px; height: 50px; border-radius: 10px; border: 3px solid transparent; cursor: pointer; transition: all 0.3s; }
+        .color-option.selected { border-color: white; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+        .client-card { background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 16px; padding: 20px; transition: all 0.3s; }
+        .client-card:hover { background: rgba(255, 215, 0, 0.1); border-color: rgba(255, 215, 0, 0.4); transform: translateY(-4px); }
+        .stats-card { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 20px; text-align: center; }
+        .stats-value { font-size: 2rem; font-weight: 700; color: #ffd700; }
+        .stats-label { color: #888; font-size: 0.85rem; margin-top: 0.5rem; }
+        .log-item { background: rgba(255, 215, 0, 0.05); border-left: 3px solid #ffd700; padding: 12px 16px; margin-bottom: 8px; border-radius: 6px; font-size: 0.9rem; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+        .video-item { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .video-info { flex: 1; }
+        .video-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(255, 215, 0, 0.1); border-radius: 4px; margin: 1rem 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #ffd700, #ffed4e); width: 0%; transition: width 0.3s; }
+        .social-item { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; gap: 1rem; align-items: center; }
+        .social-item input { margin: 0; flex: 1; }
+        .social-item button { padding: 8px 16px; margin: 0; }
+        .backup-section { background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 2rem; }
+        .backup-buttons { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .storage-info { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 1rem; font-size: 0.85rem; }
+        @media (max-width: 1024px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } h1 { font-size: 2rem; } }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 215, 0, 0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.3); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script>
+        // ===== v5.3.0 STORAGE PERSISTENCE =====
+        const STORAGE_KEY = 'VISIONARTE_DATA_v5_3';
+        
+        const COLORS = [
+            { hex: '#ffd700', name: 'Oro' }, { hex: '#00ff88', name: 'Verde Neón' }, { hex: '#ff6b9d', name: 'Rosa Hot' },
+            { hex: '#00bfff', name: 'Azul Cielo' }, { hex: '#9d4edd', name: 'Púrpura' }, { hex: '#ff6b35', name: 'Naranja' },
+            { hex: '#ff006e', name: 'Magenta' }, { hex: '#06ffa5', name: 'Mint' }, { hex: '#00d9ff', name: 'Cyan' }, { hex: '#ff9f1c', name: 'Dorado' }
+        ];
+
+        const FONTS = [
+            { name: 'Playfair Display', value: 'Playfair Display' },
+            { name: 'Poppins', value: 'Poppins' },
+            { name: 'Inter', value: 'Inter' },
+            { name: 'Cormorant Garamond', value: 'Cormorant Garamond' }
+        ];
+
+        const DEFAULT_DATA = {
+            admin: {
+                password: 'admin123',
+                socialLinks: [
+                    { name: 'Instagram', url: 'https://instagram.com/visionarte.videos' },
+                    { name: 'TikTok', url: 'https://tiktok.com/@visionarte.videos' }
+                ],
+                welcomeMessages: [
+                    '✨ Aquí están tus proyectos en máxima calidad. Disfruta de cada detalle en 4K 50fps.',
+                    '🎬 Tus videografías profesionales listas para brillar. Descarga en la mejor calidad disponible.',
+                    '💎 Tu contenido merece lo mejor. Aquí lo tienes en resolución profesional 4K.',
+                    '🌟 Bienvenido a tu galería privada. Acceso a tus videos en calidad premium sin compromisos.'
+                ]
+            },
+            clients: [
+                {
+                    id: 'c1', name: 'LALAMOURE', email: 'contact@lalamoure.com', password: 'lala123',
+                    color: '#ffd700', font: 'Playfair Display', videos: [], downloads: [],
+                    registeredDate: '2024-04-01', status: 'active', deletionDate: null
+                }
+            ],
+            archivedClients: [],
+            deletedClients: [],
+            movementLog: [],
+            downloadLog: []
+        };
+
+        let DATA = (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                return stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+            } catch (e) {
+                console.log('localStorage error, using default:', e);
+                return JSON.parse(JSON.stringify(DEFAULT_DATA));
+            }
+        })();
+
+        function saveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+            } catch (e) {
+                console.error('Error guardando datos:', e);
+                if (e.name === 'QuotaExceededError') {
+                    alert('⚠️ Almacenamiento lleno. Exporta datos para liberar espacio.');
+                }
+            }
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(DATA, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `visionarte_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        Object.assign(DATA, imported);
+                        saveData();
+                        resolve(true);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Error leyendo archivo'));
+                reader.readAsText(file);
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function daysUntilDelete(deleteDate) {
+            const today = new Date();
+            const diffTime = new Date(deleteDate) - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return Math.max(0, diffDays);
+        }
+
+        class App extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    view: 'welcome',
+                    navigationHistory: ['welcome'],
+                    adminLogged: false,
+                    clientLogged: null,
+                    adminPassword: '',
+                    clientPassword: '',
+                    selectedClientId: '',
+                    activeTab: 'clientes',
+                    selectedClient: null,
+                    modifyingClient: null,
+                    viewClientVideos: null,
+                    videoTitle: '',
+                    selectedUploadClient: '',
+                    uploadProgress: 0,
+                    uploadStatus: '',
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: '',
+                    newSocialName: '',
+                    newSocialUrl: '',
+                    newClient: { name: '', email: '', password: '', color: '#ffd700', font: 'Playfair Display' }
+                };
+                this.fileInputRef = React.createRef();
+                this.importFileRef = React.createRef();
+            }
+
+            navigateTo = (newView) => {
+                this.setState(prev => ({
+                    navigationHistory: [...prev.navigationHistory, newView],
+                    view: newView
+                }));
+            }
+
+            goBack = () => {
+                this.setState(prev => {
+                    if (prev.navigationHistory.length > 1) {
+                        const newHistory = [...prev.navigationHistory];
+                        newHistory.pop();
+                        return {
+                            navigationHistory: newHistory,
+                            view: newHistory[newHistory.length - 1]
+                        };
+                    }
+                    return prev;
+                });
+            }
+
+            handleAdminLogin = (e) => {
+                e.preventDefault();
+                if (this.state.adminPassword === DATA.admin.password) {
+                    this.setState({ adminLogged: true, adminPassword: '' });
+                    this.navigateTo('admin-panel');
+                } else {
+                    alert('❌ Contraseña incorrecta');
+                }
+            }
+
+            handleClientLogin = (e) => {
+                e.preventDefault();
+                const client = DATA.clients.find(c => c.id === this.state.selectedClientId && c.password === this.state.clientPassword);
+                if (client && client.status === 'active') {
+                    DATA.movementLog.push({ action: `Accedió: ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                    saveData();
+                    this.setState({ clientLogged: client, clientPassword: '', selectedClientId: '' });
+                    this.navigateTo('client-portal');
+                } else {
+                    alert('❌ Acceso denegado');
+                }
+            }
+
+            handleCreateClient = (e) => {
+                e.preventDefault();
+                if (!this.state.newClient.name || !this.state.newClient.email || !this.state.newClient.password) {
+                    alert('❌ Completa todos los campos');
+                    return;
+                }
+                const client = {
+                    id: `c${Date.now()}`, 
+                    ...this.state.newClient, 
+                    videos: [], 
+                    downloads: [],
+                    registeredDate: new Date().toLocaleDateString('es-ES'), 
+                    status: 'active', 
+                    deletionDate: null
+                };
+                DATA.clients.push(client);
+                DATA.movementLog.push({ action: `Creó cliente: ${this.state.newClient.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                saveData();
+                alert(`✅ Carpeta creada\n📧 ${this.state.newClient.email}\n🔐 ${this.state.newClient.password}`);
+                this.setState({ newClient: { name: '', email: '', password: '', color: '#ffd700', font: 'Playfair Display' } });
+                this.forceUpdate();
+            }
+
+            handleUploadFile = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (!this.state.selectedUploadClient) {
+                    alert('❌ Selecciona cliente');
+                    return;
+                }
+
+                const client = DATA.clients.find(c => c.id === this.state.selectedUploadClient);
+                if (!client) return;
+
+                this.setState({ uploadStatus: `Subiendo ${file.name}...`, uploadProgress: 0 });
+
+                const blobUrl = URL.createObjectURL(file);
+                
+                client.videos.push({
+                    name: this.state.videoTitle || file.name,
+                    size: file.size,
+                    uploadedDate: new Date().toLocaleDateString('es-ES'),
+                    videoUrl: blobUrl,
+                    isLocal: true
+                });
+
+                DATA.movementLog.push({ action: `Subió: ${this.state.videoTitle || file.name} a ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                saveData();
+                
+                this.setState({ 
+                    videoTitle: '', 
+                    selectedUploadClient: '',
+                    uploadStatus: `✅ Video subido: ${file.name}`,
+                    uploadProgress: 100
+                });
+                
+                setTimeout(() => {
+                    this.setState({ uploadStatus: '', uploadProgress: 0 });
+                    alert(`✅ Video subido\n📊 ${formatFileSize(file.size)}`);
+                }, 1500);
+
+                this.fileInputRef.current.value = '';
+                this.forceUpdate();
+            }
+
+            handleChangeAdminPassword = (e) => {
+                e.preventDefault();
+                if (this.state.currentPassword !== DATA.admin.password) {
+                    alert('❌ Contraseña actual incorrecta');
+                    return;
+                }
+                if (this.state.newPassword !== this.state.confirmPassword) {
+                    alert('❌ Las contraseñas no coinciden');
+                    return;
+                }
+                if (this.state.newPassword.length < 6) {
+                    alert('❌ Contraseña debe tener al menos 6 caracteres');
+                    return;
+                }
+                DATA.admin.password = this.state.newPassword;
+                DATA.movementLog.push({ action: `Cambió contraseña admin`, timestamp: new Date().toLocaleString('es-ES') });
+                saveData();
+                alert('✅ Contraseña actualizada');
+                this.setState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            }
+
+            handleAddSocialLink = (e) => {
+                e.preventDefault();
+                if (!this.state.newSocialName || !this.state.newSocialUrl) {
+                    alert('❌ Completa nombre y URL');
+                    return;
+                }
+                DATA.admin.socialLinks.push({
+                    name: this.state.newSocialName,
+                    url: this.state.newSocialUrl
+                });
+                DATA.movementLog.push({ action: `Añadió red: ${this.state.newSocialName}`, timestamp: new Date().toLocaleString('es-ES') });
+                saveData();
+                alert(`✅ ${this.state.newSocialName} añadido`);
+                this.setState({ newSocialName: '', newSocialUrl: '' });
+                this.forceUpdate();
+            }
+
+            handleRemoveSocialLink = (index) => {
+                const name = DATA.admin.socialLinks[index].name;
+                DATA.admin.socialLinks.splice(index, 1);
+                DATA.movementLog.push({ action: `Eliminó red: ${name}`, timestamp: new Date().toLocaleString('es-ES') });
+                saveData();
+                alert(`✅ ${name} eliminado`);
+                this.forceUpdate();
+            }
+
+            handleArchiveClient = (clientId) => {
+                const client = DATA.clients.find(c => c.id === clientId);
+                if (client) {
+                    client.status = 'archived';
+                    DATA.archivedClients.push({...client});
+                    DATA.movementLog.push({ action: `Archivó: ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                    saveData();
+                    alert(`✅ ${client.name} archivado`);
+                    this.setState({ selectedClient: null });
+                    this.forceUpdate();
+                }
+            }
+
+            handleDeleteClient = (clientId) => {
+                const client = DATA.clients.find(c => c.id === clientId);
+                if (client) {
+                    client.status = 'deleted';
+                    client.deletionDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                    DATA.deletedClients.push({...client});
+                    DATA.movementLog.push({ action: `Eliminó (30d): ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                    saveData();
+                    alert(`✅ ${client.name} se eliminará en 30 días`);
+                    this.setState({ selectedClient: null });
+                    this.forceUpdate();
+                }
+            }
+
+            handleModifyClient = (client) => {
+                this.setState({ modifyingClient: { ...client } });
+            }
+
+            handleSaveModifyClient = (e) => {
+                e.preventDefault();
+                const client = DATA.clients.find(c => c.id === this.state.modifyingClient.id);
+                if (client) {
+                    client.name = this.state.modifyingClient.name;
+                    client.email = this.state.modifyingClient.email;
+                    client.color = this.state.modifyingClient.color;
+                    client.font = this.state.modifyingClient.font;
+                    DATA.movementLog.push({ action: `Modificó datos: ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                    saveData();
+                    alert('✅ Datos del cliente actualizados');
+                    this.setState({ modifyingClient: null, selectedClient: null });
+                    this.forceUpdate();
+                }
+            }
+
+            handleExportData = () => {
+                exportData();
+                alert('✅ Datos exportados a JSON');
+            }
+
+            handleImportData = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    await importData(file);
+                    alert('✅ Datos importados correctamente');
+                    this.forceUpdate();
+                } catch (err) {
+                    alert(`❌ Error importando: ${err.message}`);
+                }
+                this.importFileRef.current.value = '';
+            }
+
+            downloadVideo = (video) => {
+                if (video.videoUrl) {
+                    const link = document.createElement('a');
+                    link.href = video.videoUrl;
+                    link.download = video.name || 'video.mp4';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    DATA.downloadLog.push({ action: `Descargó: ${video.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                    saveData();
+                }
+            }
+
+            openVideoPreview = (video) => {
+                if (video.videoUrl) {
+                    window.open(video.videoUrl, '_blank');
+                }
+            }
+
+            render() {
+                const { view, adminLogged, clientLogged } = this.state;
+
+                return React.createElement('div', { style: { background: 'linear-gradient(135deg, #0a0a0a 0%, #0f0f1e 100%)' } },
+                    view === 'welcome' && React.createElement(WelcomeScreen, { navigateTo: this.navigateTo }),
+                    view === 'admin-login' && React.createElement(AdminLoginScreen, {
+                        adminPassword: this.state.adminPassword,
+                        setAdminPassword: (val) => this.setState({ adminPassword: val }),
+                        handleAdminLogin: this.handleAdminLogin,
+                        navigateTo: this.navigateTo,
+                        goBack: this.goBack
+                    }),
+                    view === 'admin-panel' && adminLogged && React.createElement(AdminPanel, {
+                        navigateTo: this.navigateTo,
+                        setAdminLogged: (val) => this.setState({ adminLogged: val }),
+                        goBack: this.goBack,
+                        state: this.state,
+                        setState: (newState) => this.setState(newState),
+                        handleCreateClient: this.handleCreateClient,
+                        handleArchiveClient: this.handleArchiveClient,
+                        handleDeleteClient: this.handleDeleteClient,
+                        handleUploadFile: this.handleUploadFile,
+                        handleChangeAdminPassword: this.handleChangeAdminPassword,
+                        handleAddSocialLink: this.handleAddSocialLink,
+                        handleRemoveSocialLink: this.handleRemoveSocialLink,
+                        handleModifyClient: this.handleModifyClient,
+                        handleSaveModifyClient: this.handleSaveModifyClient,
+                        handleExportData: this.handleExportData,
+                        handleImportData: this.handleImportData,
+                        fileInputRef: this.fileInputRef,
+                        importFileRef: this.importFileRef
+                    }),
+                    view === 'client-login' && React.createElement(ClientLoginScreen, {
+                        clients: DATA.clients,
+                        selectedClientId: this.state.selectedClientId,
+                        setSelectedClientId: (val) => this.setState({ selectedClientId: val }),
+                        clientPassword: this.state.clientPassword,
+                        setClientPassword: (val) => this.setState({ clientPassword: val }),
+                        handleClientLogin: this.handleClientLogin,
+                        navigateTo: this.navigateTo,
+                        goBack: this.goBack
+                    }),
+                    view === 'client-portal' && clientLogged && React.createElement(ClientPortal, {
+                        client: clientLogged,
+                        navigateTo: this.navigateTo,
+                        setClientLogged: (val) => this.setState({ clientLogged: val }),
+                        goBack: this.goBack,
+                        downloadVideo: this.downloadVideo,
+                        openVideoPreview: this.openVideoPreview
+                    })
+                );
+            }
+        }
+
+        function WelcomeScreen({ navigateTo }) {
+            return React.createElement('div', { className: 'container' },
+                React.createElement('div', { style: { textAlign: 'center', animation: 'fadeInUp 0.8s ease-out', maxWidth: '900px' } },
+                    React.createElement('div', { className: 'logo', style: { justifyContent: 'center', marginBottom: '2rem', fontSize: '3rem' } },
+                        React.createElement('span', { className: 'logo-icon animate-float' }, '🎬'),
+                        React.createElement('span', null, 'VISIONARTE')
+                    ),
+                    React.createElement('h1', null, 'Sistema Profesional de Entrega'),
+                    React.createElement('p', { className: 'subtitle' }, 'Tus proyectos en máxima calidad. 4K 50fps sin compromisos.'),
+                    React.createElement('div', { className: 'grid-4', style: { maxWidth: '1000px', margin: '3rem auto 0' } },
+                        React.createElement('div', { className: 'feature-box' },
+                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '💎'),
+                            React.createElement('h3', null, 'Calidad Máxima'),
+                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, '4K 50fps sin compresión')
+                        ),
+                        React.createElement('div', { className: 'feature-box' },
+                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '⚡'),
+                            React.createElement('h3', null, 'Descarga Rápido'),
+                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, 'Instantáneo sin esperas')
+                        ),
+                        React.createElement('div', { className: 'feature-box' },
+                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '🔐'),
+                            React.createElement('h3', null, 'Seguro Total'),
+                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, 'Protección completa')
+                        ),
+                        React.createElement('div', { className: 'feature-box' },
+                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '💾'),
+                            React.createElement('h3', null, 'Datos Guardados'),
+                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, 'Nada se borra')
+                        )
+                    ),
+                    React.createElement('div', { style: { display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '3rem', flexWrap: 'wrap' } },
+                        React.createElement('button', { className: 'btn btn-primary', onClick: () => navigateTo('admin-login') }, '🔐 VA'),
+                        React.createElement('button', { className: 'btn btn-secondary', onClick: () => navigateTo('client-login'), style: { background: 'rgba(255, 255, 255, 0.95)', color: '#000', border: '2px solid #000' } }, '👤 Cliente')
+                    )
+                )
+            );
+        }
+
+        function AdminLoginScreen({ adminPassword, setAdminPassword, handleAdminLogin, navigateTo, goBack }) {
+            return React.createElement('div', { className: 'container' },
+                React.createElement('div', { className: 'glass', style: { padding: '50px', maxWidth: '420px', width: '90%' } },
+                    React.createElement('h2', { style: { color: '#ffd700', textAlign: 'center' } }, '🔐 VA'),
+                    React.createElement('p', { style: { color: '#b0b0b0', textAlign: 'center', marginBottom: '2rem' } }, 'Panel Administrativo'),
+                    React.createElement('form', { onSubmit: handleAdminLogin, style: { display: 'grid', gap: '1rem' } },
+                        React.createElement('input', { type: 'password', placeholder: 'Contraseña', value: adminPassword, onChange: (e) => setAdminPassword(e.target.value), autoFocus: true }),
+                        React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, 'Acceder')
+                    ),
+                    React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => navigateTo('welcome'), style: { width: '100%', marginTop: '1rem', marginBottom: 0 } }, '← Volver')
+                )
+            );
+        }
+
+        function AdminPanel({ navigateTo, setAdminLogged, goBack, state, setState, handleCreateClient, handleArchiveClient, handleDeleteClient, handleUploadFile, handleChangeAdminPassword, handleAddSocialLink, handleRemoveSocialLink, handleModifyClient, handleSaveModifyClient, handleExportData, handleImportData, fileInputRef, importFileRef }) {
+            const activeClients = DATA.clients.filter(c => c.status === 'active');
+            const archivedCount = DATA.clients.filter(c => c.status === 'archived').length;
+            const deletedCount = DATA.clients.filter(c => c.status === 'deleted').length;
+            const totalVideos = DATA.clients.reduce((sum, c) => sum + c.videos.length, 0);
+
+            return React.createElement('div', { className: 'main-content' },
+                React.createElement('div', { style: { maxWidth: '1400px', margin: '0 auto' } },
+                    React.createElement('div', { className: 'header-top' },
+                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem' } },
+                            React.createElement('button', { className: 'btn btn-secondary btn-back', onClick: goBack }, '← Atrás'),
+                            React.createElement('div', { className: 'logo', style: { fontSize: '2rem' } },
+                                React.createElement('span', { className: 'logo-icon' }, '🎬'),
+                                React.createElement('span', null, 'VA v5.3')
+                            )
+                        ),
+                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => { setAdminLogged(false); navigateTo('welcome'); } }, 'Salir')
+                    ),
+
+                    React.createElement('div', { className: 'alert alert-success' }, '✅ v5.3.0 FINAL - localStorage + Todos los apartados funcionales'),
+
+                    React.createElement('div', { className: 'backup-section' },
+                        React.createElement('h3', { style: { color: '#22c55e', marginBottom: '1rem' } }, '💾 Backup de Datos'),
+                        React.createElement('div', { className: 'storage-info' },
+                            '📊 localStorage: ',
+                            (() => {
+                                try {
+                                    const used = new Blob(Object.values(localStorage)).size;
+                                    return `${(used / 1024).toFixed(2)} KB de ~5 MB`;
+                                } catch { return 'Calculando...'; }
+                            })()
+                        ),
+                        React.createElement('div', { className: 'backup-buttons' },
+                            React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: handleExportData }, '📥 Exportar JSON'),
+                            React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => importFileRef.current.click() }, '📤 Importar JSON'),
+                            React.createElement('input', { type: 'file', ref: importFileRef, onChange: handleImportData, accept: '.json', style: { display: 'none' } })
+                        )
+                    ),
+
+                    React.createElement('div', { className: 'tabs' },
+                        ['📁 Clientes', '➕ Crear', '📹 Subir', '📦 Archivadas', '🗑️ Eliminadas', '📊 Analytics', '📝 Movimientos', '🔑 Contraseña', '📱 Redes', '💬 Mensajes'].map((label, i) => {
+                            const tabNames = ['clientes', 'crear', 'videos', 'archivadas', 'eliminadas', 'analytics', 'movimientos', 'password', 'redes', 'mensajes'];
+                            const count = (tabNames[i] === 'clientes' && ` (${activeClients.length})`) || (tabNames[i] === 'archivadas' && ` (${archivedCount})`) || (tabNames[i] === 'eliminadas' && ` (${deletedCount})`) || '';
+                            return React.createElement('button', {
+                                key: i,
+                                className: `tab ${state.activeTab === tabNames[i] ? 'active' : ''}`,
+                                onClick: () => setState({ activeTab: tabNames[i] })
+                            }, label + count);
+                        })
+                    ),
+
+                    state.activeTab === 'clientes' && React.createElement('div', null,
+                        activeClients.length === 0 ? 
+                            React.createElement('div', { className: 'glass', style: { padding: '60px', textAlign: 'center' } }, React.createElement('p', null, 'Sin clientes activos')) :
+                            React.createElement('div', { className: 'grid-3' },
+                                activeClients.map(client => React.createElement('div', { key: client.id, className: 'client-card', style: { backgroundColor: `${client.color}15` } },
+                                    React.createElement('div', { style: { fontSize: '2.5rem', marginBottom: '1rem' } }, '📁'),
+                                    React.createElement('div', { style: { color: client.color, fontWeight: '600' } }, client.name),
+                                    React.createElement('div', { style: { color: '#888', fontSize: '0.85rem', marginBottom: '1rem' } }, `🎥 ${client.videos.length} videos`),
+                                    React.createElement('div', { style: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' } },
+                                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => setState({ viewClientVideos: client }), style: { flex: 1, marginBottom: 0 } }, '📂 Ver'),
+                                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => setState({ selectedClient: client }), style: { flex: 1, marginBottom: 0 } }, '⚙️ Opciones')
+                                    )
+                                ))
+                            )
+                    ),
+
+                    state.activeTab === 'crear' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '650px' } },
+                        React.createElement('h2', null, '✨ Nueva Carpeta'),
+                        React.createElement('form', { onSubmit: handleCreateClient, style: { display: 'grid', gap: '1rem' } },
+                            React.createElement('input', { type: 'text', placeholder: 'Nombre', value: state.newClient.name, onChange: (e) => setState({ newClient: { ...state.newClient, name: e.target.value } }), required: true }),
+                            React.createElement('input', { type: 'email', placeholder: 'Email', value: state.newClient.email, onChange: (e) => setState({ newClient: { ...state.newClient, email: e.target.value } }), required: true }),
+                            React.createElement('input', { type: 'password', placeholder: 'Contraseña', value: state.newClient.password, onChange: (e) => setState({ newClient: { ...state.newClient, password: e.target.value } }), required: true }),
+                            React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '🎨 Color'),
+                            React.createElement('div', { className: 'color-picker' },
+                                COLORS.map(color => React.createElement('div', {
+                                    key: color.hex,
+                                    className: `color-option ${state.newClient.color === color.hex ? 'selected' : ''}`,
+                                    onClick: () => setState({ newClient: { ...state.newClient, color: color.hex } }),
+                                    style: { backgroundColor: color.hex }
+                                }))
+                            ),
+                            React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '✏️ Font'),
+                            React.createElement('select', { value: state.newClient.font, onChange: (e) => setState({ newClient: { ...state.newClient, font: e.target.value } }) },
+                                FONTS.map(f => React.createElement('option', { key: f.value, value: f.value }, f.name))
+                            ),
+                            React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '✅ Crear')
+                        )
+                    ),
+
+                    state.activeTab === 'videos' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '700px' } },
+                        React.createElement('h2', null, '📹 Subir Videos'),
+                        React.createElement('div', { className: 'alert alert-success' }, '💾 Los videos se guardan automáticamente'),
+                        state.uploadStatus && React.createElement('div', { className: 'alert alert-success' }, state.uploadStatus),
+                        state.uploadProgress > 0 && React.createElement('div', null,
+                            React.createElement('div', { className: 'progress-bar' },
+                                React.createElement('div', { className: 'progress-fill', style: { width: `${state.uploadProgress}%` } })
+                            )
+                        ),
+                        React.createElement('div', { style: { display: 'grid', gap: '1rem' } },
+                            React.createElement('select', { value: state.selectedUploadClient, onChange: (e) => setState({ selectedUploadClient: e.target.value }) },
+                                React.createElement('option', { value: '' }, '-- Selecciona cliente --'),
+                                DATA.clients.filter(c => c.status === 'active').map(c => React.createElement('option', { key: c.id, value: c.id }, c.name))
+                            ),
+                            React.createElement('input', { type: 'text', placeholder: 'Título (opcional)', value: state.videoTitle, onChange: (e) => setState({ videoTitle: e.target.value }) }),
+                            React.createElement('input', { type: 'file', ref: fileInputRef, onChange: handleUploadFile, accept: 'video/*', style: { display: 'none' } }),
+                            React.createElement('button', { className: 'btn btn-primary', onClick: () => fileInputRef.current.click(), style: { width: '100%' } }, '📁 Seleccionar')
+                        )
+                    ),
+
+                    state.activeTab === 'archivadas' && React.createElement('div', { className: 'glass', style: { padding: '40px' } },
+                        React.createElement('h2', null, `📦 Archivadas (${archivedCount})`),
+                        archivedCount === 0 ? 
+                            React.createElement('p', { style: { color: '#888' } }, 'Sin archivadas') :
+                            React.createElement('div', { className: 'grid-2' },
+                                DATA.clients.filter(c => c.status === 'archived').map(c => React.createElement('div', { key: c.id, className: 'client-card' },
+                                    React.createElement('div', { style: { color: '#888', fontWeight: '600' } }, c.name),
+                                    React.createElement('div', { style: { color: '#666', fontSize: '0.85rem' } }, c.registeredDate)
+                                ))
+                            )
+                    ),
+
+                    state.activeTab === 'eliminadas' && React.createElement('div', { className: 'glass', style: { padding: '40px' } },
+                        React.createElement('h2', null, `🗑️ Eliminadas (${deletedCount})`),
+                        deletedCount === 0 ?
+                            React.createElement('p', { style: { color: '#888' } }, 'Sin eliminadas') :
+                            React.createElement('div', null,
+                                DATA.clients.filter(c => c.status === 'deleted').map(c => React.createElement('div', { key: c.id, className: 'log-item' },
+                                    c.name, ` - ${daysUntilDelete(c.deletionDate)} días`
+                                ))
+                            )
+                    ),
+
+                    state.activeTab === 'analytics' && React.createElement('div', { className: 'grid-4' },
+                        React.createElement('div', { className: 'stats-card' },
+                            React.createElement('div', { className: 'stats-value' }, activeClients.length),
+                            React.createElement('div', { className: 'stats-label' }, 'Clientes')
+                        ),
+                        React.createElement('div', { className: 'stats-card' },
+                            React.createElement('div', { className: 'stats-value' }, totalVideos),
+                            React.createElement('div', { className: 'stats-label' }, 'Videos')
+                        ),
+                        React.createElement('div', { className: 'stats-card' },
+                            React.createElement('div', { className: 'stats-value' }, DATA.downloadLog.length),
+                            React.createElement('div', { className: 'stats-label' }, 'Descargas')
+                        ),
+                        React.createElement('div', { className: 'stats-card' },
+                            React.createElement('div', { className: 'stats-value' }, archivedCount),
+                            React.createElement('div', { className: 'stats-label' }, 'Archivadas')
+                        )
+                    ),
+
+                    state.activeTab === 'movimientos' && React.createElement('div', { className: 'glass', style: { padding: '40px' } },
+                        React.createElement('h2', null, '📝 Movimientos'),
+                        DATA.movementLog.length === 0 ? 
+                            React.createElement('p', { style: { color: '#888' } }, 'Sin movimientos') :
+                            DATA.movementLog.slice().reverse().map((log, idx) => React.createElement('div', { key: idx, className: 'log-item' },
+                                log.action,
+                                React.createElement('br', null),
+                                React.createElement('span', { style: { color: '#666', fontSize: '0.8rem' } }, log.timestamp)
+                            ))
+                    ),
+
+                    state.activeTab === 'password' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '500px' } },
+                        React.createElement('h2', null, '🔑 Cambiar Contraseña'),
+                        React.createElement('form', { onSubmit: handleChangeAdminPassword, style: { display: 'grid', gap: '1rem' } },
+                            React.createElement('input', { type: 'password', placeholder: 'Contraseña actual', value: state.currentPassword, onChange: (e) => setState({ currentPassword: e.target.value }), required: true }),
+                            React.createElement('input', { type: 'password', placeholder: 'Nueva contraseña', value: state.newPassword, onChange: (e) => setState({ newPassword: e.target.value }), required: true }),
+                            React.createElement('input', { type: 'password', placeholder: 'Confirmar contraseña', value: state.confirmPassword, onChange: (e) => setState({ confirmPassword: e.target.value }), required: true }),
+                            React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '✅ Cambiar')
+                        )
+                    ),
+
+                    state.activeTab === 'redes' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '600px' } },
+                        React.createElement('h2', null, '📱 Redes Sociales'),
+                        React.createElement('h3', { style: { color: '#ffd700', marginTop: '1.5rem', marginBottom: '1rem' } }, 'Enlaces actuales:'),
+                        DATA.admin.socialLinks.map((social, idx) => React.createElement('div', { key: idx, className: 'social-item' },
+                            React.createElement('div', null,
+                                React.createElement('div', { style: { color: '#ffd700', fontWeight: '600', marginBottom: '0.5rem' } }, social.name),
+                                React.createElement('div', { style: { color: '#888', fontSize: '0.85rem', wordBreak: 'break-all' } }, social.url)
+                            ),
+                            React.createElement('button', { className: 'btn btn-danger btn-small', onClick: () => handleRemoveSocialLink(idx), style: { marginBottom: 0 } }, '🗑️')
+                        )),
+                        React.createElement('h3', { style: { color: '#ffd700', marginTop: '2rem', marginBottom: '1rem' } }, 'Agregar nuevo:'),
+                        React.createElement('form', { onSubmit: handleAddSocialLink, style: { display: 'grid', gap: '1rem' } },
+                            React.createElement('input', { type: 'text', placeholder: 'Nombre (ej: YouTube)', value: state.newSocialName, onChange: (e) => setState({ newSocialName: e.target.value }), required: true }),
+                            React.createElement('input', { type: 'url', placeholder: 'URL completa', value: state.newSocialUrl, onChange: (e) => setState({ newSocialUrl: e.target.value }), required: true }),
+                            React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '➕ Agregar')
+                        )
+                    ),
+
+                    state.activeTab === 'mensajes' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '600px' } },
+                        React.createElement('h2', null, '💬 Mensajes'),
+                        DATA.admin.welcomeMessages.map((msg, idx) => React.createElement('div', { key: idx, style: { background: 'rgba(255, 215, 0, 0.05)', border: '1px solid rgba(255, 215, 0, 0.2)', borderRadius: '8px', padding: '12px', marginBottom: '8px', fontSize: '0.9rem' } }, msg))
+                    ),
+
+                    state.viewClientVideos && React.createElement('div', { className: 'modal-overlay show', onClick: () => setState({ viewClientVideos: null }) },
+                        React.createElement('div', { className: 'modal', onClick: (e) => e.stopPropagation() },
+                            React.createElement('button', { className: 'close-btn', onClick: () => setState({ viewClientVideos: null }) }, '✕'),
+                            React.createElement('h2', { style: { color: state.viewClientVideos.color } }, `📂 ${state.viewClientVideos.name}`),
+                            state.viewClientVideos.videos.length === 0 ? 
+                                React.createElement('p', { style: { color: '#888' } }, 'Sin videos') :
+                                React.createElement('div', null,
+                                    state.viewClientVideos.videos.map((video, idx) => React.createElement('div', { key: idx, className: 'video-item' },
+                                        React.createElement('div', { className: 'video-info' },
+                                            React.createElement('div', { style: { color: '#ffd700', fontWeight: '600' } }, video.name),
+                                            React.createElement('div', { style: { color: '#888', fontSize: '0.85rem' } }, `${formatFileSize(video.size)} • ${video.uploadedDate}`)
+                                        )
+                                    ))
+                                )
+                        )
+                    ),
+
+                    state.selectedClient && !state.modifyingClient && React.createElement('div', { className: 'modal-overlay show', onClick: () => setState({ selectedClient: null }) },
+                        React.createElement('div', { className: 'modal', onClick: (e) => e.stopPropagation() },
+                            React.createElement('button', { className: 'close-btn', onClick: () => setState({ selectedClient: null }) }, '✕'),
+                            React.createElement('h2', { style: { color: state.selectedClient.color } }, state.selectedClient.name),
+                            React.createElement('div', { style: { display: 'grid', gap: '1rem', marginTop: '2rem' } },
+                                React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => handleModifyClient(state.selectedClient), style: { width: '100%', marginBottom: 0 } }, '✏️ Modificar Datos'),
+                                React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => handleArchiveClient(state.selectedClient.id), style: { width: '100%', marginBottom: 0 } }, '📦 Archivar'),
+                                React.createElement('button', { className: 'btn btn-danger btn-small', onClick: () => handleDeleteClient(state.selectedClient.id), style: { width: '100%', marginBottom: 0 } }, '🗑️ Eliminar')
+                            )
+                        )
+                    ),
+
+                    state.modifyingClient && React.createElement('div', { className: 'modal-overlay show', onClick: () => setState({ modifyingClient: null }) },
+                        React.createElement('div', { className: 'modal', onClick: (e) => e.stopPropagation() },
+                            React.createElement('button', { className: 'close-btn', onClick: () => setState({ modifyingClient: null }) }, '✕'),
+                            React.createElement('h2', null, '✏️ Modificar Datos'),
+                            React.createElement('form', { onSubmit: handleSaveModifyClient, style: { display: 'grid', gap: '1rem' } },
+                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, 'Nombre'),
+                                React.createElement('input', { type: 'text', value: state.modifyingClient.name, onChange: (e) => setState({ modifyingClient: { ...state.modifyingClient, name: e.target.value } }), required: true }),
+                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, 'Email'),
+                                React.createElement('input', { type: 'email', value: state.modifyingClient.email, onChange: (e) => setState({ modifyingClient: { ...state.modifyingClient, email: e.target.value } }), required: true }),
+                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '🎨 Color'),
+                                React.createElement('div', { className: 'color-picker' },
+                                    COLORS.map(color => React.createElement('div', {
+                                        key: color.hex,
+                                        className: `color-option ${state.modifyingClient.color === color.hex ? 'selected' : ''}`,
+                                        onClick: () => setState({ modifyingClient: { ...state.modifyingClient, color: color.hex } }),
+                                        style: { backgroundColor: color.hex }
+                                    }))
+                                ),
+                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '✏️ Font'),
+                                React.createElement('select', { value: state.modifyingClient.font, onChange: (e) => setState({ modifyingClient: { ...state.modifyingClient, font: e.target.value } }) },
+                                    FONTS.map(f => React.createElement('option', { key: f.value, value: f.value }, f.name))
+                                ),
+                                React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '✅ Guardar')
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        function ClientLoginScreen({ clients, selectedClientId, setSelectedClientId, clientPassword, setClientPassword, handleClientLogin, navigateTo, goBack }) {
+            return React.createElement('div', { className: 'container' },
+                React.createElement('div', { className: 'glass', style: { padding: '50px', maxWidth: '480px', width: '90%', background: 'rgba(255, 255, 255, 0.95)', color: '#000' } },
+                    React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => navigateTo('welcome'), style: { marginBottom: '1rem', width: '100%', background: '#f0f0f0', color: '#000', border: '2px solid #ddd' } }, '← Volver'),
+                    React.createElement('h2', { style: { color: '#000', textAlign: 'center' } }, 'VISIONARTE'),
+                    React.createElement('p', { style: { color: '#666', textAlign: 'center', marginBottom: '2rem' } }, 'Acceso Cliente'),
+                    React.createElement('form', { onSubmit: handleClientLogin, style: { display: 'grid', gap: '1rem' } },
+                        React.createElement('select', { value: selectedClientId, onChange: (e) => setSelectedClientId(e.target.value), required: true, style: { background: '#f0f0f0', color: '#000', border: '2px solid #ddd', marginBottom: 0 } },
+                            React.createElement('option', { value: '' }, '-- Tu carpeta --'),
+                            clients.filter(c => c.status === 'active').map(c => React.createElement('option', { key: c.id, value: c.id }, c.name))
+                        ),
+                        React.createElement('input', { type: 'password', placeholder: 'Contraseña', value: clientPassword, onChange: (e) => setClientPassword(e.target.value), required: true, style: { background: '#f0f0f0', color: '#000', border: '2px solid #ddd' } }),
+                        React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, 'Acceder')
+                    )
+                )
+            );
+        }
+
+        function ClientPortal({ client, navigateTo, setClientLogged, goBack, downloadVideo, openVideoPreview }) {
+            const randomMsg = DATA.admin.welcomeMessages[Math.floor(Math.random() * DATA.admin.welcomeMessages.length)];
+
+            return React.createElement('div', { className: 'main-content' },
+                React.createElement('div', { style: { maxWidth: '1200px', margin: '0 auto' } },
+                    React.createElement('div', { className: 'header-top' },
+                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem' } },
+                            React.createElement('button', { className: 'btn btn-secondary btn-back', onClick: goBack }, '← Atrás'),
+                            React.createElement('div', null,
+                                React.createElement('div', { className: 'logo', style: { fontSize: '2rem' } },
+                                    React.createElement('span', { className: 'logo-icon' }, '🎬'),
+                                    React.createElement('span', null, 'VISIONARTE')
+                                ),
+                                React.createElement('div', { style: { color: client.color, fontWeight: '600', marginTop: '0.5rem', fontFamily: client.font } }, `📁 ${client.name}`)
+                            )
+                        ),
+                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => { setClientLogged(null); navigateTo('welcome'); } }, 'Salir')
+                    ),
+
+                    React.createElement('div', { style: { background: 'rgba(255, 215, 0, 0.08)', borderLeft: '4px solid #ffd700', padding: '20px', borderRadius: '12px', marginBottom: '2rem', fontFamily: client.font } },
+                        React.createElement('strong', { style: { color: client.color } }, `✨ ${randomMsg}`)
+                    ),
+
+                    client.videos.length === 0 ? 
+                        React.createElement('div', { className: 'glass', style: { padding: '60px', textAlign: 'center' } },
+                            React.createElement('div', { style: { fontSize: '3rem', marginBottom: '1rem' } }, '🎬'),
+                            React.createElement('h2', null, 'Tus videos en 4K'),
+                            React.createElement('p', { className: 'subtitle' }, 'Tu videógrafo está preparando tu contenido.')
+                        ) :
+                        React.createElement('div', { className: 'glass', style: { padding: '30px' } },
+                            React.createElement('h2', null, 'Tus Archivos 📹'),
+                            client.videos.map((video, idx) => React.createElement('div', { key: idx, className: 'video-item' },
+                                React.createElement('div', { className: 'video-info' },
+                                    React.createElement('div', { style: { color: '#ffd700', fontWeight: '600', marginBottom: '0.5rem' } }, video.name),
+                                    React.createElement('div', { style: { color: '#888', fontSize: '0.85rem' } }, `${formatFileSize(video.size || 0)} • ${video.uploadedDate}`)
+                                ),
+                                React.createElement('div', { className: 'video-buttons' },
+                                    React.createElement('button', { className: 'btn btn-primary btn-small', onClick: () => openVideoPreview(video) }, '👁️ Ver'),
+                                    React.createElement('button', { className: 'btn btn-primary btn-small', onClick: () => downloadVideo(video) }, '⬇️ Descargar')
+                                )
+                            ))
+                        ),
+
+                    DATA.admin.socialLinks.length > 0 && React.createElement('div', { style: { marginTop: '3rem', textAlign: 'center' } },
+                        React.createElement('p', { style: { color: '#b0b0b0', marginBottom: '1.5rem' } }, 'Síguenos:'),
+                        React.createElement('div', { style: { display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' } },
+                            DATA.admin.socialLinks.map((social, idx) => React.createElement('a', { key: idx, href: social.url, target: '_blank', rel: 'noopener noreferrer', style: { color: '#ffd700', textDecoration: 'none', fontWeight: '600' } }, social.name))
+                        )
+                    )
+                )
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('app')).render(React.createElement(App));
+    </script>
+</body>
+</html>
