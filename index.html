@@ -3,150 +3,2271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISIONARTE - Sistema Profesional de Entrega</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;600;700&family=Inter:wght@300;400;600&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js"></script>
+    <title>VISIONARTE Premium Delivery v5.4.1</title>
+    
+    <!-- PDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Google Fonts - INTER BLACK + Playfair -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:wght@700&family=Poppins:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; }
-        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #0a0a0a 0%, #0f0f1e 100%); color: #ffffff; }
-        .glass { background: rgba(20, 20, 30, 0.6); backdrop-filter: blur(25px); border: 1px solid rgba(255, 215, 0, 0.1); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        h1 { font-size: 3.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff 0%, #ffd700 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        h2 { font-size: 2rem; font-weight: 600; margin-bottom: 1rem; color: #ffffff; }
-        h3 { font-size: 1.2rem; color: #ffffff; }
-        .subtitle { font-size: 1.1rem; color: #d0d0d0; margin: 0.5rem 0 2rem 0; }
-        .btn { padding: 13px 34px; border: none; border-radius: 14px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1.2px; }
-        .btn-primary { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #000; box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3); }
-        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255, 215, 0, 0.5); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: #ffffff; border: 1.5px solid rgba(255, 215, 0, 0.3); }
-        .btn-secondary:hover { background: rgba(255, 215, 0, 0.12); }
-        .btn-small { padding: 8px 18px; font-size: 0.9rem; }
-        .btn-back { padding: 8px 14px; font-size: 1rem; margin-right: 1rem; }
-        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-        input, select, textarea { width: 100%; padding: 13px 16px; background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 215, 0, 0.15); border-radius: 12px; color: #ffffff; font-size: 0.95rem; font-family: 'Poppins', sans-serif; margin-bottom: 1rem; }
-        input:focus, select:focus, textarea:focus { outline: none; background: rgba(255, 255, 255, 0.1); border-color: #ffd700; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); }
-        .container { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .main-content { width: 100%; min-height: 100vh; overflow-y: auto; padding: 40px 20px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; }
-        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 2rem; }
-        .logo { font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff 0%, #ffd700 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; display: flex; align-items: center; gap: 12px; }
-        .logo-icon { font-size: 2rem; animation: float 3s ease-in-out infinite; }
-        .feature-box { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 16px; padding: 24px; text-align: center; }
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(10px); overflow-y: auto; padding: 20px; }
-        .modal-overlay.show { display: flex; }
-        .modal { background: linear-gradient(135deg, #0a0a0a 0%, #141428 100%); border: 1.5px solid rgba(255, 215, 0, 0.15); border-radius: 28px; padding: 40px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
-        .close-btn { position: absolute; top: 20px; right: 20px; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); color: #ffffff; font-size: 28px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-        .tabs { display: flex; gap: 2rem; border-bottom: 2px solid rgba(255, 215, 0, 0.1); margin-bottom: 2rem; flex-wrap: wrap; }
-        .tab { padding: 14px 0; border: none; background: none; color: #888888; cursor: pointer; font-weight: 600; transition: all 0.3s; position: relative; font-size: 0.9rem; }
-        .tab.active { color: #ffd700; }
-        .tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #ffd700, #ffed4e); }
-        .alert { padding: 12px 16px; border-radius: 12px; margin-bottom: 1rem; font-size: 0.9rem; }
-        .alert-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd; }
-        .alert-success { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #86efac; }
-        .alert-warning { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d; }
-        .color-picker { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
-        .color-option { width: 50px; height: 50px; border-radius: 10px; border: 3px solid transparent; cursor: pointer; transition: all 0.3s; }
-        .color-option.selected { border-color: white; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
-        .client-card { background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 16px; padding: 20px; transition: all 0.3s; }
-        .client-card:hover { background: rgba(255, 215, 0, 0.1); border-color: rgba(255, 215, 0, 0.4); transform: translateY(-4px); }
-        .stats-card { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 20px; text-align: center; }
-        .stats-value { font-size: 2rem; font-weight: 700; color: #ffd700; }
-        .stats-label { color: #888; font-size: 0.85rem; margin-top: 0.5rem; }
-        .log-item { background: rgba(255, 215, 0, 0.05); border-left: 3px solid #ffd700; padding: 12px 16px; margin-bottom: 8px; border-radius: 6px; font-size: 0.9rem; }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
-        .video-item { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .video-info { flex: 1; }
-        .video-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-        .progress-bar { width: 100%; height: 6px; background: rgba(255, 215, 0, 0.1); border-radius: 4px; margin: 1rem 0; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #ffd700, #ffed4e); width: 0%; transition: width 0.3s; }
-        .social-item { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; gap: 1rem; align-items: center; }
-        .social-item input { margin: 0; flex: 1; }
-        .social-item button { padding: 8px 16px; margin: 0; }
-        .backup-section { background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 2rem; }
-        .backup-buttons { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-        .storage-info { background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 1rem; font-size: 0.85rem; }
-        @media (max-width: 1024px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } h1 { font-size: 2rem; } }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(255, 215, 0, 0.05); }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.3); border-radius: 4px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-dark: #000000;
+            --bg-darker: #000000;
+            --text-light: #ffffff;
+            --gold: #ffd700;
+            --gold-light: #ffed4e;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-hover: rgba(255, 255, 255, 0.12);
+        }
+        
+        body {
+            background: #000000;
+            color: var(--text-light);
+            font-family: 'Inter', 'Poppins', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* FONDO ANIMADO SUBTLE */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(255, 215, 0, 0.05) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 80%, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* WELCOME SCREEN */
+        #welcomeScreen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .welcome-box {
+            backdrop-filter: none;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            max-width: 1200px;
+            text-align: center;
+            animation: fadeInUp 0.8s ease-out;
+            box-shadow: none;
+            position: relative;
+            overflow: visible;
+        }
+        
+        .welcome-box::before {
+            display: none;
+        }
+        
+        .welcome-box h1 {
+            font-family: 'Inter', sans-serif;
+            font-size: 80px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #ffed4e 0%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            z-index: 2;
+            line-height: 1;
+        }
+        
+        .welcome-box h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 56px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 25px;
+            line-height: 1.3;
+            color: white;
+        }
+        
+        .welcome-subtitle {
+            color: #aaa;
+            font-size: 15px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            font-weight: 500;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+            margin: 60px 0;
+            text-align: center;
+        }
+        
+        .feature {
+            padding: 35px;
+            background: rgba(255, 215, 0, 0.08);
+            border: 1.5px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature::before {
+            display: none;
+        }
+        
+        .feature:hover {
+            background: rgba(255, 215, 0, 0.12);
+            border-color: rgba(255, 215, 0, 0.3);
+            transform: translateY(-5px);
+        }
+        
+        .feature strong {
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            display: block;
+            margin-top: 12px;
+        }
+        
+        .buttons-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 50px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 2;
+        }
+        
+        button {
+            padding: 16px 40px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .btn-admin {
+            background: linear-gradient(135deg, #ffed4e 0%, var(--gold) 100%);
+            color: #000;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+        }
+        
+        .btn-admin:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 50px rgba(255, 215, 0, 0.3);
+        }
+        
+        .btn-client {
+            background: transparent;
+            color: var(--gold);
+            border: 2px solid var(--gold);
+            box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.1);
+        }
+        
+        .btn-client:hover {
+            background: var(--gold);
+            color: #000;
+            transform: translateY(-4px);
+            box-shadow: 0 20px 50px rgba(255, 215, 0, 0.3);
+        }
+        
+        /* ADMIN PANEL */
+        #adminPanel {
+            display: none;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .admin-header h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 42px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffed4e 0%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .admin-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .storage-info {
+            padding: 12px 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn-logout {
+            background: rgba(255, 107, 107, 0.15);
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+            padding: 10px 20px;
+            font-size: 12px;
+        }
+        
+        .btn-logout:hover {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        
+        .tabs-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 40px;
+            overflow-x: auto;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .tab-button {
+            padding: 14px 22px;
+            background: transparent;
+            color: #888;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            position: relative;
+        }
+        
+        .tab-button::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gold);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .tab-button.active {
+            color: var(--gold);
+        }
+        
+        .tab-button.active::after {
+            transform: scaleX(1);
+        }
+        
+        .tab-button:hover {
+            color: var(--gold);
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeInUp 0.4s ease-out;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* CLIENTS GRID */
+        .clients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+        }
+        
+        .client-card {
+            backdrop-filter: blur(20px);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 30px;
+            animation: slideIn 0.5s ease-out;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .client-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
+        }
+        
+        .client-card:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+            border-color: var(--gold);
+            transform: translateY(-8px);
+            box-shadow: 0 25px 60px rgba(255, 215, 0, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        .client-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text-light);
+        }
+        
+        .client-email {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 20px;
+            word-break: break-all;
+        }
+        
+        .client-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 20px 0;
+            padding: 20px 0;
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 12px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--gold);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        
+        .client-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-action {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px;
+            background: transparent;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-action:hover {
+            background: var(--gold);
+            color: #000;
+            transform: translateY(-2px);
+        }
+        
+        .btn-action.danger {
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+        
+        .btn-action.danger:hover {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        
+        /* MODALES */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.show {
+            display: flex;
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(10, 10, 10, 0.95) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 50px;
+            max-width: 550px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: fadeInUp 0.4s ease-out;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-header {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            color: var(--gold);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #ccc;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-light);
+            font-family: 'Inter', 'Poppins', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--gold);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.15);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 35px;
+        }
+        
+        .btn-primary {
+            flex: 1;
+            background: linear-gradient(135deg, #ffed4e 0%, var(--gold) 100%);
+            color: #000;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25);
+        }
+        
+        .btn-secondary {
+            flex: 1;
+            background: transparent;
+            color: var(--text-light);
+            border: 1px solid var(--glass-border);
+            padding: 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--glass-hover);
+            border-color: var(--gold);
+        }
+        
+        /* COLOR PICKER */
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .color-option {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            aspect-ratio: 1;
+        }
+        
+        .color-option:hover {
+            border-color: var(--gold);
+            transform: scale(1.08);
+        }
+        
+        .color-option.selected {
+            border-color: var(--gold);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+        }
+        
+        /* PORTAL CLIENTE */
+        #clientPortal {
+            display: none;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .client-portal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .client-portal-header h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 42px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffed4e 0%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 215, 0, 0.05) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            margin-bottom: 40px;
+            font-style: italic;
+            color: #ddd;
+            backdrop-filter: blur(10px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .videos-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .videos-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 25px;
+        }
+        
+        .video-card {
+            backdrop-filter: blur(20px);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 24px;
+            animation: slideIn 0.5s ease-out;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .video-card:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+            border-color: var(--gold);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 60px rgba(255, 215, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        .video-name {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-light);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .video-info {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 18px;
+        }
+        
+        .video-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-video {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            border-radius: 10px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-video:hover {
+            background: var(--gold);
+            color: #000;
+            transform: translateY(-2px);
+        }
+        
+        /* REPORT WIDGET */
+        .report-widget {
+            backdrop-filter: blur(20px);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 50px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .report-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 18px;
+            margin: 25px 0;
+        }
+        
+        .report-stat {
+            text-align: center;
+            padding: 18px;
+            background: rgba(255, 215, 0, 0.08);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .report-stat-value {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--gold);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .report-stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 13px;
+        }
+        
+        .report-table th {
+            background: rgba(255, 215, 0, 0.15);
+            color: var(--gold);
+            padding: 14px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 1px solid var(--glass-border);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .report-table td {
+            padding: 14px;
+            border-bottom: 1px solid var(--glass-border);
+            color: #ddd;
+        }
+        
+        .report-table tbody tr:hover {
+            background: rgba(255, 215, 0, 0.05);
+        }
+        
+        .client-nav {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+            padding-top: 25px;
+            border-top: 1px solid var(--glass-border);
+        }
+        
+        .btn-back,
+        .btn-logout-client {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-back {
+            background: transparent;
+            color: var(--gold);
+            border: 2px solid var(--gold);
+        }
+        
+        .btn-back:hover {
+            background: var(--gold);
+            color: #000;
+            transform: translateY(-3px);
+        }
+        
+        .btn-logout-client {
+            background: rgba(255, 107, 107, 0.15);
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
+        
+        .btn-logout-client:hover {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            .welcome-box h1 {
+                font-size: 64px;
+            }
+            
+            .welcome-box h2 {
+                font-size: 48px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+                margin: 40px 0;
+            }
+            
+            .welcome-box h1 { 
+                font-size: 48px;
+                margin-bottom: 15px;
+            }
+            
+            .welcome-box h2 { 
+                font-size: 32px;
+                margin-bottom: 15px;
+            }
+            
+            .feature {
+                padding: 28px 22px;
+            }
+            
+            .buttons-group {
+                flex-direction: column;
+            }
+            
+            .admin-header h2 { font-size: 28px; }
+            .client-portal-header h2 { font-size: 28px; }
+        }
+        
+        /* MODAL TABS */
+        .modal-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 15px;
+        }
+        
+        .modal-tab-button {
+            padding: 10px 18px;
+            background: transparent;
+            color: #888;
+            border: none;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .modal-tab-button.active {
+            color: var(--gold);
+            border-bottom: 2px solid var(--gold);
+        }
+        
+        .modal-tab-content {
+            display: none;
+        }
+        
+        .modal-tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
-    <div id="app"></div>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script>
-        // ===== v5.3.0 STORAGE PERSISTENCE =====
-        const STORAGE_KEY = 'VISIONARTE_DATA_v5_3';
+    <!-- WELCOME SCREEN -->
+    <div id="welcomeScreen" class="container">
+        <div class="welcome-box">
+            <h1 style="font-size: 72px; margin-bottom: 20px; letter-spacing: 3px;">VISIONARTE</h1>
+            
+            <h2 style="font-family: 'Inter', sans-serif; font-size: 48px; font-weight: 900; margin-bottom: 25px; line-height: 1.2;">
+                Sistema Profesional de <span style="color: var(--gold);">Entrega</span>
+            </h2>
+            
+            <p style="font-size: 16px; color: #aaa; margin-bottom: 50px; font-weight: 400; letter-spacing: 0.5px;">Tus proyectos en máxima calidad. 4K 50fps sin compromisos.</p>
+            
+            <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-icon">💎</div>
+                    <strong>Calidad Máxima</strong>
+                    <div style="font-size: 12px; color: #999; margin-top: 6px;">4K 50fps sin compresión</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <strong>Descarga Rápido</strong>
+                    <div style="font-size: 12px; color: #999; margin-top: 6px;">Instantáneo sin esperas</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔐</div>
+                    <strong>Seguro Total</strong>
+                    <div style="font-size: 12px; color: #999; margin-top: 6px;">Protección completa</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">💾</div>
+                    <strong>Datos Guardados</strong>
+                    <div style="font-size: 12px; color: #999; margin-top: 6px;">Nada se borra</div>
+                </div>
+            </div>
+            
+            <div class="buttons-group">
+                <button class="btn-admin" onclick="loginAdmin()">🔐 VA</button>
+                <button class="btn-client" onclick="loginClient()">👤 CLIENTE</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ADMIN PANEL -->
+    <div id="adminPanel" class="container">
+        <div class="admin-header">
+            <h2>Panel Admin</h2>
+            <div class="admin-actions">
+                <div class="storage-info">📊 localStorage: <span id="storageUsage">0</span> KB</div>
+                <button class="btn-logout" onclick="logout()">Salir</button>
+            </div>
+        </div>
         
-        const COLORS = [
-            { hex: '#ffd700', name: 'Oro' }, { hex: '#00ff88', name: 'Verde Neón' }, { hex: '#ff6b9d', name: 'Rosa Hot' },
-            { hex: '#00bfff', name: 'Azul Cielo' }, { hex: '#9d4edd', name: 'Púrpura' }, { hex: '#ff6b35', name: 'Naranja' },
-            { hex: '#ff006e', name: 'Magenta' }, { hex: '#06ffa5', name: 'Mint' }, { hex: '#00d9ff', name: 'Cyan' }, { hex: '#ff9f1c', name: 'Dorado' }
-        ];
+        <div style="margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="exportData()" style="background: #4caf50; color: white; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; font-family: Inter;">📥 Exportar JSON</button>
+            <button onclick="showImportInput()" style="background: #2196f3; color: white; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; font-family: Inter;">📤 Importar JSON</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+        </div>
+        
+        <div class="tabs-container">
+            <button class="tab-button active" onclick="switchTab('clientesTab', 0)">📁 Clientes</button>
+            <button class="tab-button" onclick="switchTab('crearTab', 1)">➕ Crear</button>
+            <button class="tab-button" onclick="switchTab('subirTab', 2)">📹 Subir</button>
+            <button class="tab-button" onclick="switchTab('archivadaTab', 3)">📦 Archivadas</button>
+            <button class="tab-button" onclick="switchTab('eliminadasTab', 4)">🗑️ Eliminadas</button>
+            <button class="tab-button" onclick="switchTab('analyticsTab', 5)">📊 Analytics</button>
+            <button class="tab-button" onclick="switchTab('movimientosTab', 6)">📝 Movimientos</button>
+            <button class="tab-button" onclick="switchTab('passTab', 7)">🔑 Contraseña</button>
+            <button class="tab-button" onclick="switchTab('redesTab', 8)">📱 Redes</button>
+            <button class="tab-button" onclick="switchTab('mensajesTab', 9)">💬 Mensajes</button>
+            <button class="tab-button" onclick="switchTab('informesTab', 10)">📋 Informes</button>
+        </div>
+        
+        <!-- TAB 1: CLIENTES -->
+        <div id="clientesTab" class="tab-content active">
+            <div class="clients-grid" id="clientsContainer"></div>
+        </div>
+        
+        <!-- TAB 2: CREAR -->
+        <div id="crearTab" class="tab-content">
+            <div style="max-width: 500px;">
+                <div class="form-group">
+                    <label>Nombre del Cliente</label>
+                    <input type="text" id="newClientName" placeholder="Ej: LALAMOURE">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="newClientEmail" placeholder="Ej: contact@lalamoure.com">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="newClientPassword" placeholder="Mín. 6 caracteres">
+                </div>
+                <div class="form-group">
+                    <label>Color Personal</label>
+                    <div class="color-picker" id="colorPicker"></div>
+                </div>
+                <div class="form-group">
+                    <label>Font</label>
+                    <select id="fontSelect">
+                        <option value="Inter">Inter Black</option>
+                        <option value="Playfair Display">Playfair Display</option>
+                        <option value="Poppins">Poppins</option>
+                        <option value="Cormorant Garamond">Cormorant Garamond</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="createNewClient()" style="width: 100%; margin-top: 25px;">Crear Cliente</button>
+            </div>
+        </div>
+        
+        <!-- TAB 3: SUBIR VIDEOS -->
+        <div id="subirTab" class="tab-content">
+            <div style="max-width: 500px;">
+                <div class="form-group">
+                    <label>Seleccionar Cliente</label>
+                    <select id="clientSelectUpload" onchange="updateClientSelection()">
+                        <option value="">-- Selecciona un cliente --</option>
+                    </select>
+                </div>
+                <div id="uploadSection" style="display: none;">
+                    <div class="form-group">
+                        <label>Selecciona Video(s)</label>
+                        <input type="file" id="videoInput" accept="video/*" multiple>
+                    </div>
+                    <button class="btn-primary" onclick="uploadVideos()" style="width: 100%;">Subir Videos</button>
+                </div>
+                <div id="uploadProgress" style="margin-top: 20px; display: none;">
+                    <p id="uploadStatus">Subiendo...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 4: ARCHIVADAS -->
+        <div id="archivadaTab" class="tab-content">
+            <div id="archivedClientsContainer"></div>
+        </div>
+        
+        <!-- TAB 5: ELIMINADAS -->
+        <div id="eliminadasTab" class="tab-content">
+            <div id="deletedClientsContainer"></div>
+        </div>
+        
+        <!-- TAB 6: ANALYTICS -->
+        <div id="analyticsTab" class="tab-content">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px;">
+                <div style="backdrop-filter: blur(20px); background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.15); padding: 30px; border-radius: 18px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                    <div style="font-size: 36px; font-weight: 900; color: var(--gold); font-family: Inter;" id="totalClients">0</div>
+                    <div style="color: #888; font-size: 14px; margin-top: 10px; font-weight: 600;">Clientes Activos</div>
+                </div>
+                <div style="backdrop-filter: blur(20px); background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.15); padding: 30px; border-radius: 18px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                    <div style="font-size: 36px; font-weight: 900; color: var(--gold); font-family: Inter;" id="totalVideos">0</div>
+                    <div style="color: #888; font-size: 14px; margin-top: 10px; font-weight: 600;">Videos Totales</div>
+                </div>
+                <div style="backdrop-filter: blur(20px); background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.15); padding: 30px; border-radius: 18px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                    <div style="font-size: 36px; font-weight: 900; color: var(--gold); font-family: Inter;" id="totalDownloads">0</div>
+                    <div style="color: #888; font-size: 14px; margin-top: 10px; font-weight: 600;">Descargas</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 7: MOVIMIENTOS -->
+        <div id="movimientosTab" class="tab-content">
+            <div id="movementLogContainer" style="max-height: 600px; overflow-y: auto;"></div>
+        </div>
+        
+        <!-- TAB 8: CONTRASEÑA -->
+        <div id="passTab" class="tab-content">
+            <div style="max-width: 500px;">
+                <h3 style="margin-bottom: 25px; color: var(--gold); font-family: Inter; font-weight: 800;">Cambiar Contraseña Admin</h3>
+                <div class="form-group">
+                    <label>Contraseña Actual</label>
+                    <input type="password" id="currentPassword" placeholder="Tu contraseña actual">
+                </div>
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" id="newPassword" placeholder="Mín. 6 caracteres">
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" id="confirmPassword" placeholder="Confirma tu nueva contraseña">
+                </div>
+                <button class="btn-primary" onclick="changeAdminPassword()" style="width: 100%; margin-top: 25px;">Cambiar Contraseña</button>
+            </div>
+        </div>
+        
+        <!-- TAB 9: REDES SOCIALES -->
+        <div id="redesTab" class="tab-content">
+            <div style="max-width: 500px;">
+                <h3 style="margin-bottom: 25px; color: var(--gold); font-family: Inter; font-weight: 800;">Enlaces de Redes Sociales</h3>
+                <div id="socialLinksContainer"></div>
+                <button class="btn-primary" onclick="addSocialLink()" style="width: 100%; margin-top: 25px;">➕ Agregar Red</button>
+            </div>
+        </div>
+        
+        <!-- TAB 10: MENSAJES -->
+        <div id="mensajesTab" class="tab-content">
+            <div style="max-width: 500px;">
+                <h3 style="margin-bottom: 25px; color: var(--gold); font-family: Inter; font-weight: 800;">Mensajes de Bienvenida</h3>
+                <div id="messagesContainer"></div>
+                <button class="btn-primary" onclick="addWelcomeMessage()" style="width: 100%; margin-top: 25px;">➕ Agregar Mensaje</button>
+            </div>
+        </div>
+        
+        <!-- TAB 11: INFORMES -->
+        <div id="informesTab" class="tab-content">
+            <div style="max-width: 1000px;">
+                <h3 style="margin-bottom: 25px; color: var(--gold); font-family: Inter; font-weight: 800;">📋 Informes Mensuales</h3>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
+                        <label>Seleccionar Cliente</label>
+                        <select id="reportClientSelect" onchange="loadClientReport()" style="width: 100%;">
+                            <option value="">-- Selecciona cliente --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
+                        <label>Mes</label>
+                        <input type="month" id="reportMonth" onchange="loadClientReport()" style="width: 100%;">
+                    </div>
+                    <button class="btn-primary" onclick="downloadReportPDF()" style="align-self: flex-end; padding: 14px 30px;">📥 PDF</button>
+                </div>
+                
+                <div id="reportContainer" style="display: none;">
+                    <div class="report-widget">
+                        <h4 style="color: var(--gold); margin-bottom: 25px; font-family: Inter; font-weight: 800;">
+                            <span id="reportClientName"></span> - <span id="reportMonthDisplay"></span>
+                        </h4>
+                        
+                        <div class="report-stats">
+                            <div class="report-stat">
+                                <div class="report-stat-value" id="reportTotalVideos">0</div>
+                                <div class="report-stat-label">Videos</div>
+                            </div>
+                            <div class="report-stat">
+                                <div class="report-stat-value" id="reportAvgDelivery">0</div>
+                                <div class="report-stat-label">Días Promedio</div>
+                            </div>
+                            <div class="report-stat">
+                                <div class="report-stat-value" id="reportTotalSize">0</div>
+                                <div class="report-stat-label">MB Totales</div>
+                            </div>
+                        </div>
+                        
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Título</th>
+                                    <th>Grabación</th>
+                                    <th>Entrega</th>
+                                    <th>Días</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CLIENT PORTAL -->
+    <div id="clientPortal" class="container">
+        <div class="client-portal-header">
+            <h2 id="clientNameDisplay">Tu Carpeta</h2>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="storage-info">📊 Sesión activa</div>
+                <button class="btn-logout" onclick="logout()">Salir</button>
+            </div>
+        </div>
+        
+        <div class="welcome-message" id="welcomeMsg"></div>
+        
+        <!-- VIDEOS SECTION -->
+        <div class="videos-section">
+            <div class="section-title">🎬 Tus Videos</div>
+            <div class="videos-list" id="videosContainer"></div>
+        </div>
+        
+        <!-- INFORME SECTION -->
+        <div class="videos-section">
+            <div class="section-title">📋 Tu Informe Mensual</div>
+            <div class="report-widget">
+                <div class="report-stats">
+                    <div class="report-stat">
+                        <div class="report-stat-value" id="clientReportVideoCount">0</div>
+                        <div class="report-stat-label">Videos este mes</div>
+                    </div>
+                    <div class="report-stat">
+                        <div class="report-stat-value" id="clientReportLastDate">-</div>
+                        <div class="report-stat-label">Último entregado</div>
+                    </div>
+                    <div class="report-stat">
+                        <div class="report-stat-value" id="clientReportAvgDays">0</div>
+                        <div class="report-stat-label">Promedio entrega</div>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="clientDownloadReportPDF()" style="width: 100%; margin-top: 20px;">📥 Descargar Informe</button>
+            </div>
+        </div>
+        
+        <!-- NAVEGACION -->
+        <div class="client-nav">
+            <button class="btn-back" onclick="showWelcome()">⬅ Atrás</button>
+            <button class="btn-logout-client" onclick="logout()">🚪 Salir</button>
+        </div>
+    </div>
+    
+    <!-- MODALES -->
+    <div id="adminLoginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">🔐 Acceso Admin</div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="adminPassword" placeholder="Ingresa tu contraseña" onkeypress="if(event.key==='Enter')authenticateAdmin()">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="authenticateAdmin()">Acceder</button>
+                <button class="btn-secondary" onclick="closeModal('adminLoginModal')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="clientLoginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">👤 Acceso Cliente</div>
+            <div class="form-group">
+                <label>Nombre del Cliente</label>
+                <select id="clientSelect">
+                    <option value="">-- Selecciona tu nombre --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="clientPassword" placeholder="Ingresa tu contraseña" onkeypress="if(event.key==='Enter')authenticateClient()">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="authenticateClient()">Acceder</button>
+                <button class="btn-secondary" onclick="closeModal('clientLoginModal')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="optionsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">⚙️ Opciones</div>
+            
+            <div class="modal-tabs">
+                <button class="modal-tab-button active" onclick="switchModalTab('datosTab')">📝 Datos</button>
+                <button class="modal-tab-button" onclick="switchModalTab('passClientTab')">🔐 Contraseña</button>
+                <button class="modal-tab-button" onclick="switchModalTab('redesClientTab')">📱 Redes</button>
+            </div>
+            
+            <div id="datosTab" class="modal-tab-content active">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="optClientName" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="optClientEmail">
+                </div>
+                <div class="form-group">
+                    <label>Color Personal</label>
+                    <div class="color-picker" id="optColorPicker"></div>
+                </div>
+                <div class="form-group">
+                    <label>Font</label>
+                    <select id="optFontSelect">
+                        <option value="Inter">Inter Black</option>
+                        <option value="Playfair Display">Playfair Display</option>
+                        <option value="Poppins">Poppins</option>
+                        <option value="Cormorant Garamond">Cormorant Garamond</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="updateClientData()" style="width: 100%; margin-top: 25px;">Guardar</button>
+            </div>
+            
+            <div id="passClientTab" class="modal-tab-content">
+                <p style="color: #999; font-size: 13px; margin-bottom: 20px;">📌 Solo el administrador puede cambiar tu contraseña.</p>
+            </div>
+            
+            <div id="redesClientTab" class="modal-tab-content">
+                <p style="color: #999; font-size: 13px; margin-bottom: 20px;">Redes sociales de VISIONARTE:</p>
+                <div id="optSocialLinks"></div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeModal('optionsModal')" style="width: 100%;">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
-        const FONTS = [
-            { name: 'Playfair Display', value: 'Playfair Display' },
-            { name: 'Poppins', value: 'Poppins' },
-            { name: 'Inter', value: 'Inter' },
-            { name: 'Cormorant Garamond', value: 'Cormorant Garamond' }
-        ];
-
-        const DEFAULT_DATA = {
+    <script>
+        const STORAGE_KEY = 'VISIONARTE_DATA_v5_4_1';
+        const COLORS = ['#ffd700', '#00ff88', '#ff6b9d', '#00bfff', '#9d4edd', '#ff6b35', '#ff006e', '#06ffa5', '#00d9ff', '#ff9f1c'];
+        
+        let DATA = {
             admin: {
                 password: 'admin123',
                 socialLinks: [
                     { name: 'Instagram', url: 'https://instagram.com/visionarte.videos' },
-                    { name: 'TikTok', url: 'https://tiktok.com/@visionarte.videos' }
+                    { name: 'TikTok', url: 'https://tiktok.com/@visionarte' }
                 ],
                 welcomeMessages: [
-                    '✨ Aquí están tus proyectos en máxima calidad. Disfruta de cada detalle en 4K 50fps.',
-                    '🎬 Tus videografías profesionales listas para brillar. Descarga en la mejor calidad disponible.',
-                    '💎 Tu contenido merece lo mejor. Aquí lo tienes en resolución profesional 4K.',
-                    '🌟 Bienvenido a tu galería privada. Acceso a tus videos en calidad premium sin compromisos.'
+                    '¡Bienvenido a VISIONARTE! 🎬 Tu videógrafo profesional',
+                    '✨ Hola! Aquí encontrarás tus videos profesionales',
+                    '🎥 Gracias por confiar en VISIONARTE para tu contenido',
+                    '💎 Tu contenido de calidad está listo para descargar'
                 ]
             },
-            clients: [
-                {
-                    id: 'c1', name: 'LALAMOURE', email: 'contact@lalamoure.com', password: 'lala123',
-                    color: '#ffd700', font: 'Playfair Display', videos: [], downloads: [],
-                    registeredDate: '2024-04-01', status: 'active', deletionDate: null
-                }
-            ],
+            clients: [],
             archivedClients: [],
             deletedClients: [],
             movementLog: [],
-            downloadLog: []
+            reports: {},
+            dataVersion: '5.4.1',
+            lastUpdated: new Date().toISOString()
         };
-
-        let DATA = (() => {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                return stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(DEFAULT_DATA));
-            } catch (e) {
-                console.log('localStorage error, using default:', e);
-                return JSON.parse(JSON.stringify(DEFAULT_DATA));
-            }
-        })();
-
-        function saveData() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
-            } catch (e) {
-                console.error('Error guardando datos:', e);
-                if (e.name === 'QuotaExceededError') {
-                    alert('⚠️ Almacenamiento lleno. Exporta datos para liberar espacio.');
+        
+        let currentUser = null;
+        let currentUserType = null;
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            renderColorPicker();
+            updateStorageUsage();
+            initializeToday();
+        });
+        
+        function initializeToday() {
+            const today = new Date();
+            const monthStr = today.toISOString().split('T')[0].substring(0, 7);
+            document.getElementById('reportMonth').value = monthStr;
+        }
+        
+        function loadData() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    Object.assign(DATA, parsed);
+                } catch (e) {
+                    console.error('Error al cargar datos:', e);
                 }
             }
+            refreshAllUI();
         }
-
+        
+        function saveData() {
+            DATA.lastUpdated = new Date().toISOString();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+            updateStorageUsage();
+        }
+        
+        function updateStorageUsage() {
+            const used = new Blob([JSON.stringify(DATA)]).size / 1024;
+            document.getElementById('storageUsage').textContent = used.toFixed(1);
+        }
+        
+        function loginAdmin() {
+            openModal('adminLoginModal');
+        }
+        
+        function loginClient() {
+            populateClientSelect();
+            openModal('clientLoginModal');
+        }
+        
+        function authenticateAdmin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === DATA.admin.password) {
+                currentUser = 'admin';
+                currentUserType = 'admin';
+                closeModal('adminLoginModal');
+                showAdminPanel();
+                logMovement('Admin accedió al sistema');
+                document.getElementById('adminPassword').value = '';
+            } else {
+                alert('❌ Contraseña incorrecta');
+            }
+        }
+        
+        function authenticateClient() {
+            const clientName = document.getElementById('clientSelect').value;
+            const password = document.getElementById('clientPassword').value;
+            
+            if (!clientName) {
+                alert('❌ Selecciona un cliente');
+                return;
+            }
+            
+            const client = DATA.clients.find(c => c.name === clientName && c.status === 'active');
+            if (!client) {
+                alert('❌ Cliente no encontrado');
+                return;
+            }
+            
+            if (password !== client.password) {
+                alert('❌ Contraseña incorrecta');
+                return;
+            }
+            
+            currentUser = clientName;
+            currentUserType = 'client';
+            closeModal('clientLoginModal');
+            showClientPortal();
+            logMovement(`Cliente ${clientName} accedió`);
+            document.getElementById('clientPassword').value = '';
+        }
+        
+        function logout() {
+            if (currentUserType === 'admin') {
+                logMovement('Admin cerró sesión');
+            } else if (currentUserType === 'client') {
+                logMovement(`Cliente ${currentUser} cerró sesión`);
+            }
+            currentUser = null;
+            currentUserType = null;
+            showWelcome();
+            saveData();
+        }
+        
+        function showWelcome() {
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('clientPortal').style.display = 'none';
+        }
+        
+        function showAdminPanel() {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            document.getElementById('clientPortal').style.display = 'none';
+            refreshAdminUI();
+        }
+        
+        function showClientPortal() {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('clientPortal').style.display = 'block';
+            refreshClientPortalUI();
+        }
+        
+        function switchTab(tabName, index) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            document.querySelectorAll('.tab-button')[index].classList.add('active');
+        }
+        
+        function switchModalTab(tabName) {
+            document.querySelectorAll('.modal-tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.modal-tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('show');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+        
+        function renderColorPicker() {
+            const picker = document.getElementById('colorPicker');
+            picker.innerHTML = '';
+            COLORS.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color-option';
+                div.style.backgroundColor = color;
+                div.onclick = () => {
+                    document.querySelectorAll('#colorPicker .color-option').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                };
+                if (color === '#ffd700') div.classList.add('selected');
+                picker.appendChild(div);
+            });
+        }
+        
+        function getSelectedColor() {
+            const selected = document.querySelector('#colorPicker .color-option.selected');
+            return selected ? selected.style.backgroundColor : '#ffd700';
+        }
+        
+        function createNewClient() {
+            const name = document.getElementById('newClientName').value;
+            const email = document.getElementById('newClientEmail').value;
+            const password = document.getElementById('newClientPassword').value;
+            const color = getSelectedColor();
+            const font = document.getElementById('fontSelect').value;
+            
+            if (!name || !email || !password) {
+                alert('❌ Completa todos los campos');
+                return;
+            }
+            
+            if (password.length < 6) {
+                alert('❌ Contraseña mín. 6 caracteres');
+                return;
+            }
+            
+            if (DATA.clients.some(c => c.name === name && c.status === 'active')) {
+                alert('❌ Ya existe un cliente con ese nombre');
+                return;
+            }
+            
+            const newClient = {
+                id: 'c_' + Date.now(),
+                name: name,
+                email: email,
+                password: password,
+                color: color,
+                font: font,
+                videos: [],
+                downloads: [],
+                registeredDate: new Date().toISOString().split('T')[0],
+                status: 'active',
+                deletionDate: null,
+                dataVersion: '5.4.1',
+                lastUpdated: new Date().toISOString()
+            };
+            
+            DATA.clients.push(newClient);
+            saveData();
+            logMovement(`✨ Cliente "${name}" creado`);
+            
+            document.getElementById('newClientName').value = '';
+            document.getElementById('newClientEmail').value = '';
+            document.getElementById('newClientPassword').value = '';
+            
+            alert('✅ Cliente creado exitosamente');
+            refreshAdminUI();
+        }
+        
+        function refreshAdminUI() {
+            refreshClients();
+            refreshArchivedClients();
+            refreshDeletedClients();
+            refreshAnalytics();
+            refreshMovementLog();
+            refreshSocialLinks();
+            refreshMessages();
+            populateReportClient();
+            populateClientSelectUpload();
+            updateAllReports();
+        }
+        
+        function refreshClients() {
+            const container = document.getElementById('clientsContainer');
+            container.innerHTML = '';
+            
+            const active = DATA.clients.filter(c => c.status === 'active');
+            
+            if (active.length === 0) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #888;">No hay clientes activos.</p>';
+                return;
+            }
+            
+            active.forEach(client => {
+                const card = document.createElement('div');
+                card.className = 'client-card';
+                
+                card.innerHTML = `
+                    <div class="client-name">${client.name}</div>
+                    <div class="client-email">${client.email}</div>
+                    <div class="client-stats">
+                        <div class="stat">
+                            <div class="stat-number">${client.videos.length}</div>
+                            <div class="stat-label">Videos</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">${client.downloads.length}</div>
+                            <div class="stat-label">Descargas</div>
+                        </div>
+                    </div>
+                    <div class="client-actions">
+                        <button class="btn-action" onclick="openClientOptions('${client.name}')">⚙️ Editar</button>
+                        <button class="btn-action" onclick="changeClientPassword('${client.name}')">🔐 Pass</button>
+                        <button class="btn-action" onclick="archiveClient('${client.id}')">📦 Archivar</button>
+                        <button class="btn-action danger" onclick="deleteClient('${client.id}')">🗑️ Eliminar</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        function archiveClient(clientId) {
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (client && confirm(`¿Archivar cliente "${client.name}"?`)) {
+                client.status = 'archived';
+                saveData();
+                logMovement(`📦 Cliente "${client.name}" archivado`);
+                refreshAdminUI();
+            }
+        }
+        
+        function deleteClient(clientId) {
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (client && confirm(`¿Eliminar cliente "${client.name}"? Se borrará en 30 días.`)) {
+                client.status = 'deleted';
+                client.deletionDate = new Date().toISOString();
+                saveData();
+                logMovement(`🗑️ Cliente "${client.name}" marcado para eliminar`);
+                refreshAdminUI();
+            }
+        }
+        
+        function openClientOptions(clientName) {
+            const client = DATA.clients.find(c => c.name === clientName);
+            if (!client) return;
+            
+            document.getElementById('optClientName').value = client.name;
+            document.getElementById('optClientEmail').value = client.email;
+            document.getElementById('optFontSelect').value = client.font;
+            
+            renderOptColorPicker(client.color);
+            renderOptSocialLinks();
+            
+            openModal('optionsModal');
+        }
+        
+        function renderOptColorPicker(selectedColor) {
+            const picker = document.getElementById('optColorPicker');
+            picker.innerHTML = '';
+            COLORS.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color-option';
+                div.style.backgroundColor = color;
+                div.onclick = () => {
+                    document.querySelectorAll('#optColorPicker .color-option').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                };
+                if (color === selectedColor) div.classList.add('selected');
+                picker.appendChild(div);
+            });
+        }
+        
+        function getSelectedOptColor() {
+            const selected = document.querySelector('#optColorPicker .color-option.selected');
+            return selected ? selected.style.backgroundColor : '#ffd700';
+        }
+        
+        function updateClientData() {
+            const clientName = document.getElementById('optClientName').value;
+            const client = DATA.clients.find(c => c.name === clientName);
+            
+            if (!client) return;
+            
+            client.email = document.getElementById('optClientEmail').value;
+            client.color = getSelectedOptColor();
+            client.font = document.getElementById('optFontSelect').value;
+            client.lastUpdated = new Date().toISOString();
+            
+            saveData();
+            logMovement(`📝 Datos de "${clientName}" actualizados`);
+            alert('✅ Cambios guardados');
+            closeModal('optionsModal');
+            refreshAdminUI();
+        }
+        
+        function changeClientPassword(clientName) {
+            const client = DATA.clients.find(c => c.name === clientName && c.status === 'active');
+            if (!client) return;
+            
+            const newPass = prompt(`🔐 Nueva contraseña para ${clientName}:`);
+            if (newPass === null) return;
+            
+            if (newPass.length < 6) {
+                alert('❌ Contraseña mín. 6 caracteres');
+                return;
+            }
+            
+            client.password = newPass;
+            client.lastUpdated = new Date().toISOString();
+            saveData();
+            logMovement(`🔐 Contraseña de "${clientName}" cambiada`);
+            alert('✅ Contraseña actualizada');
+            refreshAdminUI();
+        }
+        
+        function populateClientSelectUpload() {
+            const select = document.getElementById('clientSelectUpload');
+            const active = DATA.clients.filter(c => c.status === 'active');
+            
+            select.innerHTML = '<option value="">-- Selecciona un cliente --</option>';
+            active.forEach(client => {
+                const opt = document.createElement('option');
+                opt.value = client.id;
+                opt.textContent = client.name;
+                select.appendChild(opt);
+            });
+        }
+        
+        function updateClientSelection() {
+            const clientId = document.getElementById('clientSelectUpload').value;
+            const uploadSection = document.getElementById('uploadSection');
+            uploadSection.style.display = clientId ? 'block' : 'none';
+        }
+        
+        function uploadVideos() {
+            const clientId = document.getElementById('clientSelectUpload').value;
+            const files = document.getElementById('videoInput').files;
+            
+            if (!clientId) {
+                alert('❌ Selecciona un cliente');
+                return;
+            }
+            
+            if (files.length === 0) {
+                alert('❌ Selecciona al menos un video');
+                return;
+            }
+            
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (!client) return;
+            
+            const uploadProgress = document.getElementById('uploadProgress');
+            uploadProgress.style.display = 'block';
+            
+            let uploaded = 0;
+            
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const video = {
+                        id: 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9),
+                        name: file.name,
+                        size: file.size,
+                        uploadedDate: new Date().toISOString(),
+                        videoUrl: e.target.result,
+                        isLocal: true,
+                        dateAdded: new Date().toISOString()
+                    };
+                    
+                    client.videos.push(video);
+                    uploaded++;
+                    
+                    document.getElementById('uploadStatus').textContent = `Procesado ${uploaded}/${files.length}...`;
+                    
+                    if (uploaded === files.length) {
+                        saveData();
+                        logMovement(`🎬 ${uploaded} video(s) subidos a "${client.name}"`);
+                        document.getElementById('videoInput').value = '';
+                        uploadProgress.style.display = 'none';
+                        alert('✅ Videos subidos');
+                        refreshAdminUI();
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        function refreshAnalytics() {
+            const active = DATA.clients.filter(c => c.status === 'active');
+            const totalVideos = active.reduce((sum, c) => sum + c.videos.length, 0);
+            const totalDownloads = active.reduce((sum, c) => sum + c.downloads.length, 0);
+            
+            document.getElementById('totalClients').textContent = active.length;
+            document.getElementById('totalVideos').textContent = totalVideos;
+            document.getElementById('totalDownloads').textContent = totalDownloads;
+        }
+        
+        function logMovement(action) {
+            DATA.movementLog.push({
+                action: action,
+                timestamp: new Date().toISOString()
+            });
+            saveData();
+        }
+        
+        function refreshMovementLog() {
+            const container = document.getElementById('movementLogContainer');
+            container.innerHTML = '';
+            
+            const logs = [...DATA.movementLog].reverse().slice(0, 100);
+            
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding: 14px; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 10px; font-size: 13px; display: flex; justify-content: space-between; backdrop-filter: blur(10px);';
+                div.innerHTML = `
+                    <span>${log.action}</span>
+                    <span style="color: #888; font-size: 12px;">${new Date(log.timestamp).toLocaleString()}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function refreshArchivedClients() {
+            const container = document.getElementById('archivedClientsContainer');
+            const archived = DATA.clients.filter(c => c.status === 'archived');
+            
+            container.innerHTML = archived.length === 0 ? '<p style="color: #888;">No hay clientes archivados.</p>' : '';
+            
+            archived.forEach(client => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <strong>${client.name}</strong> (${client.videos.length} videos)
+                    <button onclick="unarchiveClient('${client.id}')" style="margin-left: 10px; padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">Restaurar</button>
+                `;
+                div.style.cssText = 'padding: 14px; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(10px);';
+                container.appendChild(div);
+            });
+        }
+        
+        function unarchiveClient(clientId) {
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (client) {
+                client.status = 'active';
+                saveData();
+                logMovement(`📂 Cliente "${client.name}" restaurado`);
+                refreshAdminUI();
+            }
+        }
+        
+        function refreshDeletedClients() {
+            const container = document.getElementById('deletedClientsContainer');
+            const deleted = DATA.clients.filter(c => c.status === 'deleted');
+            
+            container.innerHTML = deleted.length === 0 ? '<p style="color: #888;">No hay clientes eliminados.</p>' : '';
+            
+            deleted.forEach(client => {
+                const delDate = new Date(client.deletionDate);
+                const now = new Date();
+                const daysLeft = 30 - Math.floor((now - delDate) / (1000 * 60 * 60 * 24));
+                
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <div>
+                        <strong>${client.name}</strong> (${Math.floor((now - delDate) / (1000 * 60 * 60 * 24))} días, ${daysLeft} para borrar)
+                    </div>
+                    <button onclick="restoreDeletedClient('${client.id}')" style="padding: 8px 16px; background: #2196f3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">Restaurar</button>
+                `;
+                div.style.cssText = 'padding: 14px; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 10px; backdrop-filter: blur(10px);';
+                container.appendChild(div);
+            });
+        }
+        
+        function restoreDeletedClient(clientId) {
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (client) {
+                client.status = 'active';
+                client.deletionDate = null;
+                saveData();
+                logMovement(`♻️ Cliente "${client.name}" restaurado`);
+                refreshAdminUI();
+            }
+        }
+        
+        function refreshSocialLinks() {
+            const container = document.getElementById('socialLinksContainer');
+            container.innerHTML = '';
+            
+            DATA.admin.socialLinks.forEach((link, index) => {
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; gap: 10px; margin-bottom: 12px;';
+                div.innerHTML = `
+                    <input type="text" value="${link.name}" placeholder="Nombre" style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: white; border-radius: 10px; font-size: 12px; font-family: Inter;">
+                    <input type="text" value="${link.url}" placeholder="URL" style="flex: 2; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: white; border-radius: 10px; font-size: 12px; font-family: Inter;">
+                    <button onclick="updateSocialLink(${index})" style="padding: 10px 16px; background: var(--gold); color: black; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700;">✓</button>
+                    <button onclick="deleteSocialLink(${index})" style="padding: 10px 16px; background: #ff6b6b; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700;">✕</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function updateSocialLink(index) {
+            const inputs = document.querySelectorAll('#socialLinksContainer input');
+            const idx = index * 2;
+            DATA.admin.socialLinks[index].name = inputs[idx].value;
+            DATA.admin.socialLinks[index].url = inputs[idx + 1].value;
+            saveData();
+            refreshSocialLinks();
+        }
+        
+        function deleteSocialLink(index) {
+            DATA.admin.socialLinks.splice(index, 1);
+            saveData();
+            refreshSocialLinks();
+        }
+        
+        function addSocialLink() {
+            DATA.admin.socialLinks.push({ name: 'Nueva', url: '' });
+            refreshSocialLinks();
+        }
+        
+        function renderOptSocialLinks() {
+            const container = document.getElementById('optSocialLinks');
+            container.innerHTML = '';
+            
+            DATA.admin.socialLinks.forEach(link => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding: 12px; background: rgba(255,215,0,0.1); border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(255,215,0,0.2);';
+                div.innerHTML = `<strong style="color: var(--gold); font-family: Inter;">${link.name}</strong><div style="font-size: 12px; color: #888; margin-top: 4px;">${link.url}</div>`;
+                container.appendChild(div);
+            });
+        }
+        
+        function refreshMessages() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+            
+            DATA.admin.welcomeMessages.forEach((msg, index) => {
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; gap: 10px; margin-bottom: 12px;';
+                div.innerHTML = `
+                    <textarea style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: white; border-radius: 10px; font-size: 12px; min-height: 70px; font-family: Inter;" readonly>${msg}</textarea>
+                    <button onclick="deleteMessage(${index})" style="padding: 10px 16px; background: #ff6b6b; color: white; border: none; border-radius: 10px; cursor: pointer; height: fit-content; font-weight: 700;">✕</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function deleteMessage(index) {
+            DATA.admin.welcomeMessages.splice(index, 1);
+            saveData();
+            refreshMessages();
+        }
+        
+        function addWelcomeMessage() {
+            const msg = prompt('Nuevo mensaje de bienvenida:');
+            if (msg) {
+                DATA.admin.welcomeMessages.push(msg);
+                saveData();
+                refreshMessages();
+            }
+        }
+        
+        function changeAdminPassword() {
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            
+            if (current !== DATA.admin.password) {
+                alert('❌ Contraseña actual incorrecta');
+                return;
+            }
+            
+            if (newPass.length < 6) {
+                alert('❌ Contraseña mín. 6 caracteres');
+                return;
+            }
+            
+            if (newPass !== confirm) {
+                alert('❌ Las contraseñas no coinciden');
+                return;
+            }
+            
+            DATA.admin.password = newPass;
+            saveData();
+            logMovement('🔐 Admin cambió su contraseña');
+            alert('✅ Contraseña actualizada');
+            
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+        
+        function populateReportClient() {
+            const select = document.getElementById('reportClientSelect');
+            const active = DATA.clients.filter(c => c.status === 'active');
+            
+            select.innerHTML = '<option value="">-- Selecciona cliente --</option>';
+            active.forEach(client => {
+                const opt = document.createElement('option');
+                opt.value = client.name;
+                opt.textContent = client.name;
+                select.appendChild(opt);
+            });
+        }
+        
+        function updateAllReports() {
+            DATA.clients.forEach(client => {
+                if (!DATA.reports[client.name]) {
+                    DATA.reports[client.name] = {};
+                }
+                
+                client.videos.forEach(video => {
+                    const uploadDate = new Date(video.uploadedDate);
+                    const monthKey = uploadDate.toISOString().substring(0, 7);
+                    
+                    if (!DATA.reports[client.name][monthKey]) {
+                        DATA.reports[client.name][monthKey] = [];
+                    }
+                    
+                    if (!DATA.reports[client.name][monthKey].find(v => v.id === video.id)) {
+                        const entregaDate = new Date(uploadDate.getTime() + 3 * 24 * 60 * 60 * 1000);
+                        DATA.reports[client.name][monthKey].push({
+                            ...video,
+                            fechaEntrega: entregaDate.toISOString().split('T')[0]
+                        });
+                    }
+                });
+            });
+            saveData();
+        }
+        
+        function loadClientReport() {
+            const clientName = document.getElementById('reportClientSelect').value;
+            const month = document.getElementById('reportMonth').value;
+            const container = document.getElementById('reportContainer');
+            
+            if (!clientName || !month) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            const videos = DATA.reports[clientName]?.[month] || [];
+            
+            if (videos.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            
+            document.getElementById('reportClientName').textContent = clientName;
+            document.getElementById('reportMonthDisplay').textContent = new Date(month + '-01').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            document.getElementById('reportTotalVideos').textContent = videos.length;
+            
+            const avgDays = videos.reduce((sum, v) => {
+                const grabacion = new Date(v.uploadedDate);
+                const entrega = new Date(v.fechaEntrega);
+                return sum + Math.floor((entrega - grabacion) / (1000 * 60 * 60 * 24));
+            }, 0) / videos.length;
+            
+            document.getElementById('reportAvgDelivery').textContent = avgDays.toFixed(1);
+            
+            const totalSize = (videos.reduce((sum, v) => sum + (v.size || 0), 0) / (1024 * 1024)).toFixed(1);
+            document.getElementById('reportTotalSize').textContent = totalSize;
+            
+            const tbody = document.getElementById('reportTableBody');
+            tbody.innerHTML = '';
+            
+            videos.forEach((video, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${video.name}</td>
+                    <td>${new Date(video.uploadedDate).toLocaleDateString('es-ES')}</td>
+                    <td>${video.fechaEntrega}</td>
+                    <td>${Math.floor((new Date(video.fechaEntrega) - new Date(video.uploadedDate)) / (1000 * 60 * 60 * 24))}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function downloadReportPDF() {
+            const clientName = document.getElementById('reportClientSelect').value;
+            const month = document.getElementById('reportMonth').value;
+            
+            if (!clientName || !month) {
+                alert('❌ Selecciona cliente y mes');
+                return;
+            }
+            
+            const element = document.getElementById('reportContainer');
+            const opt = {
+                margin: 10,
+                filename: `visionarte_informe_${clientName}_${month}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+            };
+            
+            html2pdf().set(opt).from(element).save();
+        }
+        
+        function refreshClientPortalUI() {
+            const client = DATA.clients.find(c => c.name === currentUser && c.status === 'active');
+            if (!client) {
+                showWelcome();
+                return;
+            }
+            
+            document.getElementById('clientNameDisplay').textContent = `${client.name} 💎`;
+            document.getElementById('welcomeMsg').textContent = DATA.admin.welcomeMessages[Math.floor(Math.random() * DATA.admin.welcomeMessages.length)];
+            
+            refreshClientVideos(client);
+            refreshClientReport(client);
+            populateClientSelect();
+        }
+        
+        function populateClientSelect() {
+            const select = document.getElementById('clientSelect');
+            const active = DATA.clients.filter(c => c.status === 'active');
+            
+            select.innerHTML = '<option value="">-- Selecciona tu nombre --</option>';
+            active.forEach(client => {
+                const opt = document.createElement('option');
+                opt.value = client.name;
+                opt.textContent = client.name;
+                select.appendChild(opt);
+            });
+        }
+        
+        function refreshClientVideos(client) {
+            const container = document.getElementById('videosContainer');
+            container.innerHTML = '';
+            
+            if (client.videos.length === 0) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #888;">Próximamente tendrás tus videos aquí.</p>';
+                return;
+            }
+            
+            client.videos.forEach(video => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                
+                const sizeMB = (video.size / (1024 * 1024)).toFixed(1);
+                
+                card.innerHTML = `
+                    <div class="video-name">🎬 ${video.name}</div>
+                    <div class="video-info">
+                        <div>📦 ${sizeMB} MB</div>
+                        <div>📅 ${new Date(video.uploadedDate).toLocaleDateString('es-ES')}</div>
+                    </div>
+                    <div class="video-actions">
+                        <button class="btn-video" onclick="downloadVideo('${video.id}', '${video.name}')">⬇️ Descargar</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        function downloadVideo(videoId, videoName) {
+            const client = DATA.clients.find(c => c.name === currentUser);
+            if (!client) return;
+            
+            client.downloads.push({
+                videoId: videoId,
+                timestamp: new Date().toISOString()
+            });
+            saveData();
+            logMovement(`⬇️ ${currentUser} descargó: ${videoName}`);
+            
+            alert('✅ Descarga iniciada: ' + videoName);
+        }
+        
+        function refreshClientReport(client) {
+            const now = new Date();
+            const monthKey = now.toISOString().substring(0, 7);
+            const videos = DATA.reports[client.name]?.[monthKey] || [];
+            
+            document.getElementById('clientReportVideoCount').textContent = videos.length;
+            
+            if (videos.length > 0) {
+                const lastVideo = videos[videos.length - 1];
+                document.getElementById('clientReportLastDate').textContent = new Date(lastVideo.fechaEntrega).toLocaleDateString('es-ES');
+                
+                const avgDays = videos.reduce((sum, v) => {
+                    const grabacion = new Date(v.uploadedDate);
+                    const entrega = new Date(v.fechaEntrega);
+                    return sum + Math.floor((entrega - grabacion) / (1000 * 60 * 60 * 24));
+                }, 0) / videos.length;
+                
+                document.getElementById('clientReportAvgDays').textContent = avgDays.toFixed(1);
+            }
+        }
+        
+        function clientDownloadReportPDF() {
+            const client = DATA.clients.find(c => c.name === currentUser);
+            if (!client) return;
+            
+            const now = new Date();
+            const monthKey = now.toISOString().substring(0, 7);
+            const videos = DATA.reports[client.name]?.[monthKey] || [];
+            
+            if (videos.length === 0) {
+                alert('❌ No hay videos este mes');
+                return;
+            }
+            
+            let html = `
+                <div style="padding: 40px; max-width: 800px; margin: 0 auto; font-family: 'Inter', Arial, sans-serif; background: white; color: #333;">
+                    <h1 style="color: #ffd700; margin-bottom: 10px; font-family: 'Inter'; font-weight: 900;">VISIONARTE</h1>
+                    <h2 style="margin-bottom: 30px; color: #333;">Informe Mensual de Videos</h2>
+                    
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #ddd;">
+                        <p><strong>Cliente:</strong> ${client.name}</p>
+                        <p><strong>Mes:</strong> ${new Date(monthKey + '-01').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</p>
+                        <p><strong>Total Videos:</strong> ${videos.length}</p>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                        <thead>
+                            <tr style="background: #ffd700;">
+                                <th style="padding: 12px; text-align: left;">#</th>
+                                <th style="padding: 12px; text-align: left;">Título</th>
+                                <th style="padding: 12px; text-align: left;">Grabación</th>
+                                <th style="padding: 12px; text-align: left;">Entrega</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            videos.forEach((video, i) => {
+                html += `
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 12px;">${i + 1}</td>
+                        <td style="padding: 12px;">${video.name}</td>
+                        <td style="padding: 12px;">${new Date(video.uploadedDate).toLocaleDateString('es-ES')}</td>
+                        <td style="padding: 12px;">${video.fechaEntrega}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                    
+                    <div style="text-align: center; color: #999; font-size: 12px;">
+                        <p>Generado por VISIONARTE</p>
+                        <p>@visionarte.videos</p>
+                    </div>
+                </div>
+            `;
+            
+            const opt = {
+                margin: 10,
+                filename: `visionarte_mi_informe_${monthKey}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+            };
+            
+            html2pdf().set(opt).from(html).save();
+        }
+        
         function exportData() {
             const dataStr = JSON.stringify(DATA, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -154,749 +2275,41 @@
             const link = document.createElement('a');
             link.href = url;
             link.download = `visionarte_backup_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            logMovement('💾 Datos exportados');
         }
-
-        function importData(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const imported = JSON.parse(e.target.result);
-                        Object.assign(DATA, imported);
-                        saveData();
-                        resolve(true);
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                reader.onerror = () => reject(new Error('Error leyendo archivo'));
-                reader.readAsText(file);
-            });
+        
+        function showImportInput() {
+            document.getElementById('importFile').click();
         }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
-
-        function daysUntilDelete(deleteDate) {
-            const today = new Date();
-            const diffTime = new Date(deleteDate) - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return Math.max(0, diffDays);
-        }
-
-        class App extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = {
-                    view: 'welcome',
-                    navigationHistory: ['welcome'],
-                    adminLogged: false,
-                    clientLogged: null,
-                    adminPassword: '',
-                    clientPassword: '',
-                    selectedClientId: '',
-                    activeTab: 'clientes',
-                    selectedClient: null,
-                    modifyingClient: null,
-                    viewClientVideos: null,
-                    videoTitle: '',
-                    selectedUploadClient: '',
-                    uploadProgress: 0,
-                    uploadStatus: '',
-                    currentPassword: '',
-                    newPassword: '',
-                    confirmPassword: '',
-                    newSocialName: '',
-                    newSocialUrl: '',
-                    newClient: { name: '', email: '', password: '', color: '#ffd700', font: 'Playfair Display' }
-                };
-                this.fileInputRef = React.createRef();
-                this.importFileRef = React.createRef();
-            }
-
-            navigateTo = (newView) => {
-                this.setState(prev => ({
-                    navigationHistory: [...prev.navigationHistory, newView],
-                    view: newView
-                }));
-            }
-
-            goBack = () => {
-                this.setState(prev => {
-                    if (prev.navigationHistory.length > 1) {
-                        const newHistory = [...prev.navigationHistory];
-                        newHistory.pop();
-                        return {
-                            navigationHistory: newHistory,
-                            view: newHistory[newHistory.length - 1]
-                        };
-                    }
-                    return prev;
-                });
-            }
-
-            handleAdminLogin = (e) => {
-                e.preventDefault();
-                if (this.state.adminPassword === DATA.admin.password) {
-                    this.setState({ adminLogged: true, adminPassword: '' });
-                    this.navigateTo('admin-panel');
-                } else {
-                    alert('❌ Contraseña incorrecta');
-                }
-            }
-
-            handleClientLogin = (e) => {
-                e.preventDefault();
-                const client = DATA.clients.find(c => c.id === this.state.selectedClientId && c.password === this.state.clientPassword);
-                if (client && client.status === 'active') {
-                    DATA.movementLog.push({ action: `Accedió: ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
-                    saveData();
-                    this.setState({ clientLogged: client, clientPassword: '', selectedClientId: '' });
-                    this.navigateTo('client-portal');
-                } else {
-                    alert('❌ Acceso denegado');
-                }
-            }
-
-            handleCreateClient = (e) => {
-                e.preventDefault();
-                if (!this.state.newClient.name || !this.state.newClient.email || !this.state.newClient.password) {
-                    alert('❌ Completa todos los campos');
-                    return;
-                }
-                const client = {
-                    id: `c${Date.now()}`, 
-                    ...this.state.newClient, 
-                    videos: [], 
-                    downloads: [],
-                    registeredDate: new Date().toLocaleDateString('es-ES'), 
-                    status: 'active', 
-                    deletionDate: null
-                };
-                DATA.clients.push(client);
-                DATA.movementLog.push({ action: `Creó cliente: ${this.state.newClient.name}`, timestamp: new Date().toLocaleString('es-ES') });
-                saveData();
-                alert(`✅ Carpeta creada\n📧 ${this.state.newClient.email}\n🔐 ${this.state.newClient.password}`);
-                this.setState({ newClient: { name: '', email: '', password: '', color: '#ffd700', font: 'Playfair Display' } });
-                this.forceUpdate();
-            }
-
-            handleUploadFile = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                if (!this.state.selectedUploadClient) {
-                    alert('❌ Selecciona cliente');
-                    return;
-                }
-
-                const client = DATA.clients.find(c => c.id === this.state.selectedUploadClient);
-                if (!client) return;
-
-                this.setState({ uploadStatus: `Subiendo ${file.name}...`, uploadProgress: 0 });
-
-                const blobUrl = URL.createObjectURL(file);
-                
-                client.videos.push({
-                    name: this.state.videoTitle || file.name,
-                    size: file.size,
-                    uploadedDate: new Date().toLocaleDateString('es-ES'),
-                    videoUrl: blobUrl,
-                    isLocal: true
-                });
-
-                DATA.movementLog.push({ action: `Subió: ${this.state.videoTitle || file.name} a ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
-                saveData();
-                
-                this.setState({ 
-                    videoTitle: '', 
-                    selectedUploadClient: '',
-                    uploadStatus: `✅ Video subido: ${file.name}`,
-                    uploadProgress: 100
-                });
-                
-                setTimeout(() => {
-                    this.setState({ uploadStatus: '', uploadProgress: 0 });
-                    alert(`✅ Video subido\n📊 ${formatFileSize(file.size)}`);
-                }, 1500);
-
-                this.fileInputRef.current.value = '';
-                this.forceUpdate();
-            }
-
-            handleChangeAdminPassword = (e) => {
-                e.preventDefault();
-                if (this.state.currentPassword !== DATA.admin.password) {
-                    alert('❌ Contraseña actual incorrecta');
-                    return;
-                }
-                if (this.state.newPassword !== this.state.confirmPassword) {
-                    alert('❌ Las contraseñas no coinciden');
-                    return;
-                }
-                if (this.state.newPassword.length < 6) {
-                    alert('❌ Contraseña debe tener al menos 6 caracteres');
-                    return;
-                }
-                DATA.admin.password = this.state.newPassword;
-                DATA.movementLog.push({ action: `Cambió contraseña admin`, timestamp: new Date().toLocaleString('es-ES') });
-                saveData();
-                alert('✅ Contraseña actualizada');
-                this.setState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-            }
-
-            handleAddSocialLink = (e) => {
-                e.preventDefault();
-                if (!this.state.newSocialName || !this.state.newSocialUrl) {
-                    alert('❌ Completa nombre y URL');
-                    return;
-                }
-                DATA.admin.socialLinks.push({
-                    name: this.state.newSocialName,
-                    url: this.state.newSocialUrl
-                });
-                DATA.movementLog.push({ action: `Añadió red: ${this.state.newSocialName}`, timestamp: new Date().toLocaleString('es-ES') });
-                saveData();
-                alert(`✅ ${this.state.newSocialName} añadido`);
-                this.setState({ newSocialName: '', newSocialUrl: '' });
-                this.forceUpdate();
-            }
-
-            handleRemoveSocialLink = (index) => {
-                const name = DATA.admin.socialLinks[index].name;
-                DATA.admin.socialLinks.splice(index, 1);
-                DATA.movementLog.push({ action: `Eliminó red: ${name}`, timestamp: new Date().toLocaleString('es-ES') });
-                saveData();
-                alert(`✅ ${name} eliminado`);
-                this.forceUpdate();
-            }
-
-            handleArchiveClient = (clientId) => {
-                const client = DATA.clients.find(c => c.id === clientId);
-                if (client) {
-                    client.status = 'archived';
-                    DATA.archivedClients.push({...client});
-                    DATA.movementLog.push({ action: `Archivó: ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
-                    saveData();
-                    alert(`✅ ${client.name} archivado`);
-                    this.setState({ selectedClient: null });
-                    this.forceUpdate();
-                }
-            }
-
-            handleDeleteClient = (clientId) => {
-                const client = DATA.clients.find(c => c.id === clientId);
-                if (client) {
-                    client.status = 'deleted';
-                    client.deletionDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                    DATA.deletedClients.push({...client});
-                    DATA.movementLog.push({ action: `Eliminó (30d): ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
-                    saveData();
-                    alert(`✅ ${client.name} se eliminará en 30 días`);
-                    this.setState({ selectedClient: null });
-                    this.forceUpdate();
-                }
-            }
-
-            handleModifyClient = (client) => {
-                this.setState({ modifyingClient: { ...client } });
-            }
-
-            handleSaveModifyClient = (e) => {
-                e.preventDefault();
-                const client = DATA.clients.find(c => c.id === this.state.modifyingClient.id);
-                if (client) {
-                    client.name = this.state.modifyingClient.name;
-                    client.email = this.state.modifyingClient.email;
-                    client.color = this.state.modifyingClient.color;
-                    client.font = this.state.modifyingClient.font;
-                    DATA.movementLog.push({ action: `Modificó datos: ${client.name}`, timestamp: new Date().toLocaleString('es-ES') });
-                    saveData();
-                    alert('✅ Datos del cliente actualizados');
-                    this.setState({ modifyingClient: null, selectedClient: null });
-                    this.forceUpdate();
-                }
-            }
-
-            handleExportData = () => {
-                exportData();
-                alert('✅ Datos exportados a JSON');
-            }
-
-            handleImportData = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+        
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
                 try {
-                    await importData(file);
-                    alert('✅ Datos importados correctamente');
-                    this.forceUpdate();
-                } catch (err) {
-                    alert(`❌ Error importando: ${err.message}`);
-                }
-                this.importFileRef.current.value = '';
-            }
-
-            downloadVideo = (video) => {
-                if (video.videoUrl) {
-                    const link = document.createElement('a');
-                    link.href = video.videoUrl;
-                    link.download = video.name || 'video.mp4';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    DATA.downloadLog.push({ action: `Descargó: ${video.name}`, timestamp: new Date().toLocaleString('es-ES') });
+                    const imported = JSON.parse(e.target.result);
+                    Object.assign(DATA, imported);
                     saveData();
+                    alert('✅ Datos importados');
+                    refreshAdminUI();
+                    logMovement('📤 Datos importados desde backup');
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
                 }
-            }
-
-            openVideoPreview = (video) => {
-                if (video.videoUrl) {
-                    window.open(video.videoUrl, '_blank');
-                }
-            }
-
-            render() {
-                const { view, adminLogged, clientLogged } = this.state;
-
-                return React.createElement('div', { style: { background: 'linear-gradient(135deg, #0a0a0a 0%, #0f0f1e 100%)' } },
-                    view === 'welcome' && React.createElement(WelcomeScreen, { navigateTo: this.navigateTo }),
-                    view === 'admin-login' && React.createElement(AdminLoginScreen, {
-                        adminPassword: this.state.adminPassword,
-                        setAdminPassword: (val) => this.setState({ adminPassword: val }),
-                        handleAdminLogin: this.handleAdminLogin,
-                        navigateTo: this.navigateTo,
-                        goBack: this.goBack
-                    }),
-                    view === 'admin-panel' && adminLogged && React.createElement(AdminPanel, {
-                        navigateTo: this.navigateTo,
-                        setAdminLogged: (val) => this.setState({ adminLogged: val }),
-                        goBack: this.goBack,
-                        state: this.state,
-                        setState: (newState) => this.setState(newState),
-                        handleCreateClient: this.handleCreateClient,
-                        handleArchiveClient: this.handleArchiveClient,
-                        handleDeleteClient: this.handleDeleteClient,
-                        handleUploadFile: this.handleUploadFile,
-                        handleChangeAdminPassword: this.handleChangeAdminPassword,
-                        handleAddSocialLink: this.handleAddSocialLink,
-                        handleRemoveSocialLink: this.handleRemoveSocialLink,
-                        handleModifyClient: this.handleModifyClient,
-                        handleSaveModifyClient: this.handleSaveModifyClient,
-                        handleExportData: this.handleExportData,
-                        handleImportData: this.handleImportData,
-                        fileInputRef: this.fileInputRef,
-                        importFileRef: this.importFileRef
-                    }),
-                    view === 'client-login' && React.createElement(ClientLoginScreen, {
-                        clients: DATA.clients,
-                        selectedClientId: this.state.selectedClientId,
-                        setSelectedClientId: (val) => this.setState({ selectedClientId: val }),
-                        clientPassword: this.state.clientPassword,
-                        setClientPassword: (val) => this.setState({ clientPassword: val }),
-                        handleClientLogin: this.handleClientLogin,
-                        navigateTo: this.navigateTo,
-                        goBack: this.goBack
-                    }),
-                    view === 'client-portal' && clientLogged && React.createElement(ClientPortal, {
-                        client: clientLogged,
-                        navigateTo: this.navigateTo,
-                        setClientLogged: (val) => this.setState({ clientLogged: val }),
-                        goBack: this.goBack,
-                        downloadVideo: this.downloadVideo,
-                        openVideoPreview: this.openVideoPreview
-                    })
-                );
+            };
+            reader.readAsText(file);
+        }
+        
+        function refreshAllUI() {
+            if (currentUserType === 'admin') {
+                refreshAdminUI();
+            } else if (currentUserType === 'client') {
+                refreshClientPortalUI();
             }
         }
-
-        function WelcomeScreen({ navigateTo }) {
-            return React.createElement('div', { className: 'container' },
-                React.createElement('div', { style: { textAlign: 'center', animation: 'fadeInUp 0.8s ease-out', maxWidth: '900px' } },
-                    React.createElement('div', { className: 'logo', style: { justifyContent: 'center', marginBottom: '2rem', fontSize: '3rem' } },
-                        React.createElement('span', { className: 'logo-icon animate-float' }, '🎬'),
-                        React.createElement('span', null, 'VISIONARTE')
-                    ),
-                    React.createElement('h1', null, 'Sistema Profesional de Entrega'),
-                    React.createElement('p', { className: 'subtitle' }, 'Tus proyectos en máxima calidad. 4K 50fps sin compromisos.'),
-                    React.createElement('div', { className: 'grid-4', style: { maxWidth: '1000px', margin: '3rem auto 0' } },
-                        React.createElement('div', { className: 'feature-box' },
-                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '💎'),
-                            React.createElement('h3', null, 'Calidad Máxima'),
-                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, '4K 50fps sin compresión')
-                        ),
-                        React.createElement('div', { className: 'feature-box' },
-                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '⚡'),
-                            React.createElement('h3', null, 'Descarga Rápido'),
-                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, 'Instantáneo sin esperas')
-                        ),
-                        React.createElement('div', { className: 'feature-box' },
-                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '🔐'),
-                            React.createElement('h3', null, 'Seguro Total'),
-                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, 'Protección completa')
-                        ),
-                        React.createElement('div', { className: 'feature-box' },
-                            React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' } }, '💾'),
-                            React.createElement('h3', null, 'Datos Guardados'),
-                            React.createElement('p', { style: { color: '#888', fontSize: '0.85rem' } }, 'Nada se borra')
-                        )
-                    ),
-                    React.createElement('div', { style: { display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '3rem', flexWrap: 'wrap' } },
-                        React.createElement('button', { className: 'btn btn-primary', onClick: () => navigateTo('admin-login') }, '🔐 VA'),
-                        React.createElement('button', { className: 'btn btn-secondary', onClick: () => navigateTo('client-login'), style: { background: 'rgba(255, 255, 255, 0.95)', color: '#000', border: '2px solid #000' } }, '👤 Cliente')
-                    )
-                )
-            );
-        }
-
-        function AdminLoginScreen({ adminPassword, setAdminPassword, handleAdminLogin, navigateTo, goBack }) {
-            return React.createElement('div', { className: 'container' },
-                React.createElement('div', { className: 'glass', style: { padding: '50px', maxWidth: '420px', width: '90%' } },
-                    React.createElement('h2', { style: { color: '#ffd700', textAlign: 'center' } }, '🔐 VA'),
-                    React.createElement('p', { style: { color: '#b0b0b0', textAlign: 'center', marginBottom: '2rem' } }, 'Panel Administrativo'),
-                    React.createElement('form', { onSubmit: handleAdminLogin, style: { display: 'grid', gap: '1rem' } },
-                        React.createElement('input', { type: 'password', placeholder: 'Contraseña', value: adminPassword, onChange: (e) => setAdminPassword(e.target.value), autoFocus: true }),
-                        React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, 'Acceder')
-                    ),
-                    React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => navigateTo('welcome'), style: { width: '100%', marginTop: '1rem', marginBottom: 0 } }, '← Volver')
-                )
-            );
-        }
-
-        function AdminPanel({ navigateTo, setAdminLogged, goBack, state, setState, handleCreateClient, handleArchiveClient, handleDeleteClient, handleUploadFile, handleChangeAdminPassword, handleAddSocialLink, handleRemoveSocialLink, handleModifyClient, handleSaveModifyClient, handleExportData, handleImportData, fileInputRef, importFileRef }) {
-            const activeClients = DATA.clients.filter(c => c.status === 'active');
-            const archivedCount = DATA.clients.filter(c => c.status === 'archived').length;
-            const deletedCount = DATA.clients.filter(c => c.status === 'deleted').length;
-            const totalVideos = DATA.clients.reduce((sum, c) => sum + c.videos.length, 0);
-
-            return React.createElement('div', { className: 'main-content' },
-                React.createElement('div', { style: { maxWidth: '1400px', margin: '0 auto' } },
-                    React.createElement('div', { className: 'header-top' },
-                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem' } },
-                            React.createElement('button', { className: 'btn btn-secondary btn-back', onClick: goBack }, '← Atrás'),
-                            React.createElement('div', { className: 'logo', style: { fontSize: '2rem' } },
-                                React.createElement('span', { className: 'logo-icon' }, '🎬'),
-                                React.createElement('span', null, 'VA v5.3')
-                            )
-                        ),
-                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => { setAdminLogged(false); navigateTo('welcome'); } }, 'Salir')
-                    ),
-
-                    React.createElement('div', { className: 'alert alert-success' }, '✅ v5.3.0 FINAL - localStorage + Todos los apartados funcionales'),
-
-                    React.createElement('div', { className: 'backup-section' },
-                        React.createElement('h3', { style: { color: '#22c55e', marginBottom: '1rem' } }, '💾 Backup de Datos'),
-                        React.createElement('div', { className: 'storage-info' },
-                            '📊 localStorage: ',
-                            (() => {
-                                try {
-                                    const used = new Blob(Object.values(localStorage)).size;
-                                    return `${(used / 1024).toFixed(2)} KB de ~5 MB`;
-                                } catch { return 'Calculando...'; }
-                            })()
-                        ),
-                        React.createElement('div', { className: 'backup-buttons' },
-                            React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: handleExportData }, '📥 Exportar JSON'),
-                            React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => importFileRef.current.click() }, '📤 Importar JSON'),
-                            React.createElement('input', { type: 'file', ref: importFileRef, onChange: handleImportData, accept: '.json', style: { display: 'none' } })
-                        )
-                    ),
-
-                    React.createElement('div', { className: 'tabs' },
-                        ['📁 Clientes', '➕ Crear', '📹 Subir', '📦 Archivadas', '🗑️ Eliminadas', '📊 Analytics', '📝 Movimientos', '🔑 Contraseña', '📱 Redes', '💬 Mensajes'].map((label, i) => {
-                            const tabNames = ['clientes', 'crear', 'videos', 'archivadas', 'eliminadas', 'analytics', 'movimientos', 'password', 'redes', 'mensajes'];
-                            const count = (tabNames[i] === 'clientes' && ` (${activeClients.length})`) || (tabNames[i] === 'archivadas' && ` (${archivedCount})`) || (tabNames[i] === 'eliminadas' && ` (${deletedCount})`) || '';
-                            return React.createElement('button', {
-                                key: i,
-                                className: `tab ${state.activeTab === tabNames[i] ? 'active' : ''}`,
-                                onClick: () => setState({ activeTab: tabNames[i] })
-                            }, label + count);
-                        })
-                    ),
-
-                    state.activeTab === 'clientes' && React.createElement('div', null,
-                        activeClients.length === 0 ? 
-                            React.createElement('div', { className: 'glass', style: { padding: '60px', textAlign: 'center' } }, React.createElement('p', null, 'Sin clientes activos')) :
-                            React.createElement('div', { className: 'grid-3' },
-                                activeClients.map(client => React.createElement('div', { key: client.id, className: 'client-card', style: { backgroundColor: `${client.color}15` } },
-                                    React.createElement('div', { style: { fontSize: '2.5rem', marginBottom: '1rem' } }, '📁'),
-                                    React.createElement('div', { style: { color: client.color, fontWeight: '600' } }, client.name),
-                                    React.createElement('div', { style: { color: '#888', fontSize: '0.85rem', marginBottom: '1rem' } }, `🎥 ${client.videos.length} videos`),
-                                    React.createElement('div', { style: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' } },
-                                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => setState({ viewClientVideos: client }), style: { flex: 1, marginBottom: 0 } }, '📂 Ver'),
-                                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => setState({ selectedClient: client }), style: { flex: 1, marginBottom: 0 } }, '⚙️ Opciones')
-                                    )
-                                ))
-                            )
-                    ),
-
-                    state.activeTab === 'crear' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '650px' } },
-                        React.createElement('h2', null, '✨ Nueva Carpeta'),
-                        React.createElement('form', { onSubmit: handleCreateClient, style: { display: 'grid', gap: '1rem' } },
-                            React.createElement('input', { type: 'text', placeholder: 'Nombre', value: state.newClient.name, onChange: (e) => setState({ newClient: { ...state.newClient, name: e.target.value } }), required: true }),
-                            React.createElement('input', { type: 'email', placeholder: 'Email', value: state.newClient.email, onChange: (e) => setState({ newClient: { ...state.newClient, email: e.target.value } }), required: true }),
-                            React.createElement('input', { type: 'password', placeholder: 'Contraseña', value: state.newClient.password, onChange: (e) => setState({ newClient: { ...state.newClient, password: e.target.value } }), required: true }),
-                            React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '🎨 Color'),
-                            React.createElement('div', { className: 'color-picker' },
-                                COLORS.map(color => React.createElement('div', {
-                                    key: color.hex,
-                                    className: `color-option ${state.newClient.color === color.hex ? 'selected' : ''}`,
-                                    onClick: () => setState({ newClient: { ...state.newClient, color: color.hex } }),
-                                    style: { backgroundColor: color.hex }
-                                }))
-                            ),
-                            React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '✏️ Font'),
-                            React.createElement('select', { value: state.newClient.font, onChange: (e) => setState({ newClient: { ...state.newClient, font: e.target.value } }) },
-                                FONTS.map(f => React.createElement('option', { key: f.value, value: f.value }, f.name))
-                            ),
-                            React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '✅ Crear')
-                        )
-                    ),
-
-                    state.activeTab === 'videos' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '700px' } },
-                        React.createElement('h2', null, '📹 Subir Videos'),
-                        React.createElement('div', { className: 'alert alert-success' }, '💾 Los videos se guardan automáticamente'),
-                        state.uploadStatus && React.createElement('div', { className: 'alert alert-success' }, state.uploadStatus),
-                        state.uploadProgress > 0 && React.createElement('div', null,
-                            React.createElement('div', { className: 'progress-bar' },
-                                React.createElement('div', { className: 'progress-fill', style: { width: `${state.uploadProgress}%` } })
-                            )
-                        ),
-                        React.createElement('div', { style: { display: 'grid', gap: '1rem' } },
-                            React.createElement('select', { value: state.selectedUploadClient, onChange: (e) => setState({ selectedUploadClient: e.target.value }) },
-                                React.createElement('option', { value: '' }, '-- Selecciona cliente --'),
-                                DATA.clients.filter(c => c.status === 'active').map(c => React.createElement('option', { key: c.id, value: c.id }, c.name))
-                            ),
-                            React.createElement('input', { type: 'text', placeholder: 'Título (opcional)', value: state.videoTitle, onChange: (e) => setState({ videoTitle: e.target.value }) }),
-                            React.createElement('input', { type: 'file', ref: fileInputRef, onChange: handleUploadFile, accept: 'video/*', style: { display: 'none' } }),
-                            React.createElement('button', { className: 'btn btn-primary', onClick: () => fileInputRef.current.click(), style: { width: '100%' } }, '📁 Seleccionar')
-                        )
-                    ),
-
-                    state.activeTab === 'archivadas' && React.createElement('div', { className: 'glass', style: { padding: '40px' } },
-                        React.createElement('h2', null, `📦 Archivadas (${archivedCount})`),
-                        archivedCount === 0 ? 
-                            React.createElement('p', { style: { color: '#888' } }, 'Sin archivadas') :
-                            React.createElement('div', { className: 'grid-2' },
-                                DATA.clients.filter(c => c.status === 'archived').map(c => React.createElement('div', { key: c.id, className: 'client-card' },
-                                    React.createElement('div', { style: { color: '#888', fontWeight: '600' } }, c.name),
-                                    React.createElement('div', { style: { color: '#666', fontSize: '0.85rem' } }, c.registeredDate)
-                                ))
-                            )
-                    ),
-
-                    state.activeTab === 'eliminadas' && React.createElement('div', { className: 'glass', style: { padding: '40px' } },
-                        React.createElement('h2', null, `🗑️ Eliminadas (${deletedCount})`),
-                        deletedCount === 0 ?
-                            React.createElement('p', { style: { color: '#888' } }, 'Sin eliminadas') :
-                            React.createElement('div', null,
-                                DATA.clients.filter(c => c.status === 'deleted').map(c => React.createElement('div', { key: c.id, className: 'log-item' },
-                                    c.name, ` - ${daysUntilDelete(c.deletionDate)} días`
-                                ))
-                            )
-                    ),
-
-                    state.activeTab === 'analytics' && React.createElement('div', { className: 'grid-4' },
-                        React.createElement('div', { className: 'stats-card' },
-                            React.createElement('div', { className: 'stats-value' }, activeClients.length),
-                            React.createElement('div', { className: 'stats-label' }, 'Clientes')
-                        ),
-                        React.createElement('div', { className: 'stats-card' },
-                            React.createElement('div', { className: 'stats-value' }, totalVideos),
-                            React.createElement('div', { className: 'stats-label' }, 'Videos')
-                        ),
-                        React.createElement('div', { className: 'stats-card' },
-                            React.createElement('div', { className: 'stats-value' }, DATA.downloadLog.length),
-                            React.createElement('div', { className: 'stats-label' }, 'Descargas')
-                        ),
-                        React.createElement('div', { className: 'stats-card' },
-                            React.createElement('div', { className: 'stats-value' }, archivedCount),
-                            React.createElement('div', { className: 'stats-label' }, 'Archivadas')
-                        )
-                    ),
-
-                    state.activeTab === 'movimientos' && React.createElement('div', { className: 'glass', style: { padding: '40px' } },
-                        React.createElement('h2', null, '📝 Movimientos'),
-                        DATA.movementLog.length === 0 ? 
-                            React.createElement('p', { style: { color: '#888' } }, 'Sin movimientos') :
-                            DATA.movementLog.slice().reverse().map((log, idx) => React.createElement('div', { key: idx, className: 'log-item' },
-                                log.action,
-                                React.createElement('br', null),
-                                React.createElement('span', { style: { color: '#666', fontSize: '0.8rem' } }, log.timestamp)
-                            ))
-                    ),
-
-                    state.activeTab === 'password' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '500px' } },
-                        React.createElement('h2', null, '🔑 Cambiar Contraseña'),
-                        React.createElement('form', { onSubmit: handleChangeAdminPassword, style: { display: 'grid', gap: '1rem' } },
-                            React.createElement('input', { type: 'password', placeholder: 'Contraseña actual', value: state.currentPassword, onChange: (e) => setState({ currentPassword: e.target.value }), required: true }),
-                            React.createElement('input', { type: 'password', placeholder: 'Nueva contraseña', value: state.newPassword, onChange: (e) => setState({ newPassword: e.target.value }), required: true }),
-                            React.createElement('input', { type: 'password', placeholder: 'Confirmar contraseña', value: state.confirmPassword, onChange: (e) => setState({ confirmPassword: e.target.value }), required: true }),
-                            React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '✅ Cambiar')
-                        )
-                    ),
-
-                    state.activeTab === 'redes' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '600px' } },
-                        React.createElement('h2', null, '📱 Redes Sociales'),
-                        React.createElement('h3', { style: { color: '#ffd700', marginTop: '1.5rem', marginBottom: '1rem' } }, 'Enlaces actuales:'),
-                        DATA.admin.socialLinks.map((social, idx) => React.createElement('div', { key: idx, className: 'social-item' },
-                            React.createElement('div', null,
-                                React.createElement('div', { style: { color: '#ffd700', fontWeight: '600', marginBottom: '0.5rem' } }, social.name),
-                                React.createElement('div', { style: { color: '#888', fontSize: '0.85rem', wordBreak: 'break-all' } }, social.url)
-                            ),
-                            React.createElement('button', { className: 'btn btn-danger btn-small', onClick: () => handleRemoveSocialLink(idx), style: { marginBottom: 0 } }, '🗑️')
-                        )),
-                        React.createElement('h3', { style: { color: '#ffd700', marginTop: '2rem', marginBottom: '1rem' } }, 'Agregar nuevo:'),
-                        React.createElement('form', { onSubmit: handleAddSocialLink, style: { display: 'grid', gap: '1rem' } },
-                            React.createElement('input', { type: 'text', placeholder: 'Nombre (ej: YouTube)', value: state.newSocialName, onChange: (e) => setState({ newSocialName: e.target.value }), required: true }),
-                            React.createElement('input', { type: 'url', placeholder: 'URL completa', value: state.newSocialUrl, onChange: (e) => setState({ newSocialUrl: e.target.value }), required: true }),
-                            React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '➕ Agregar')
-                        )
-                    ),
-
-                    state.activeTab === 'mensajes' && React.createElement('div', { className: 'glass', style: { padding: '40px', maxWidth: '600px' } },
-                        React.createElement('h2', null, '💬 Mensajes'),
-                        DATA.admin.welcomeMessages.map((msg, idx) => React.createElement('div', { key: idx, style: { background: 'rgba(255, 215, 0, 0.05)', border: '1px solid rgba(255, 215, 0, 0.2)', borderRadius: '8px', padding: '12px', marginBottom: '8px', fontSize: '0.9rem' } }, msg))
-                    ),
-
-                    state.viewClientVideos && React.createElement('div', { className: 'modal-overlay show', onClick: () => setState({ viewClientVideos: null }) },
-                        React.createElement('div', { className: 'modal', onClick: (e) => e.stopPropagation() },
-                            React.createElement('button', { className: 'close-btn', onClick: () => setState({ viewClientVideos: null }) }, '✕'),
-                            React.createElement('h2', { style: { color: state.viewClientVideos.color } }, `📂 ${state.viewClientVideos.name}`),
-                            state.viewClientVideos.videos.length === 0 ? 
-                                React.createElement('p', { style: { color: '#888' } }, 'Sin videos') :
-                                React.createElement('div', null,
-                                    state.viewClientVideos.videos.map((video, idx) => React.createElement('div', { key: idx, className: 'video-item' },
-                                        React.createElement('div', { className: 'video-info' },
-                                            React.createElement('div', { style: { color: '#ffd700', fontWeight: '600' } }, video.name),
-                                            React.createElement('div', { style: { color: '#888', fontSize: '0.85rem' } }, `${formatFileSize(video.size)} • ${video.uploadedDate}`)
-                                        )
-                                    ))
-                                )
-                        )
-                    ),
-
-                    state.selectedClient && !state.modifyingClient && React.createElement('div', { className: 'modal-overlay show', onClick: () => setState({ selectedClient: null }) },
-                        React.createElement('div', { className: 'modal', onClick: (e) => e.stopPropagation() },
-                            React.createElement('button', { className: 'close-btn', onClick: () => setState({ selectedClient: null }) }, '✕'),
-                            React.createElement('h2', { style: { color: state.selectedClient.color } }, state.selectedClient.name),
-                            React.createElement('div', { style: { display: 'grid', gap: '1rem', marginTop: '2rem' } },
-                                React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => handleModifyClient(state.selectedClient), style: { width: '100%', marginBottom: 0 } }, '✏️ Modificar Datos'),
-                                React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => handleArchiveClient(state.selectedClient.id), style: { width: '100%', marginBottom: 0 } }, '📦 Archivar'),
-                                React.createElement('button', { className: 'btn btn-danger btn-small', onClick: () => handleDeleteClient(state.selectedClient.id), style: { width: '100%', marginBottom: 0 } }, '🗑️ Eliminar')
-                            )
-                        )
-                    ),
-
-                    state.modifyingClient && React.createElement('div', { className: 'modal-overlay show', onClick: () => setState({ modifyingClient: null }) },
-                        React.createElement('div', { className: 'modal', onClick: (e) => e.stopPropagation() },
-                            React.createElement('button', { className: 'close-btn', onClick: () => setState({ modifyingClient: null }) }, '✕'),
-                            React.createElement('h2', null, '✏️ Modificar Datos'),
-                            React.createElement('form', { onSubmit: handleSaveModifyClient, style: { display: 'grid', gap: '1rem' } },
-                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, 'Nombre'),
-                                React.createElement('input', { type: 'text', value: state.modifyingClient.name, onChange: (e) => setState({ modifyingClient: { ...state.modifyingClient, name: e.target.value } }), required: true }),
-                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, 'Email'),
-                                React.createElement('input', { type: 'email', value: state.modifyingClient.email, onChange: (e) => setState({ modifyingClient: { ...state.modifyingClient, email: e.target.value } }), required: true }),
-                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '🎨 Color'),
-                                React.createElement('div', { className: 'color-picker' },
-                                    COLORS.map(color => React.createElement('div', {
-                                        key: color.hex,
-                                        className: `color-option ${state.modifyingClient.color === color.hex ? 'selected' : ''}`,
-                                        onClick: () => setState({ modifyingClient: { ...state.modifyingClient, color: color.hex } }),
-                                        style: { backgroundColor: color.hex }
-                                    }))
-                                ),
-                                React.createElement('label', { style: { color: '#ffd700', fontWeight: '600', marginBottom: 0 } }, '✏️ Font'),
-                                React.createElement('select', { value: state.modifyingClient.font, onChange: (e) => setState({ modifyingClient: { ...state.modifyingClient, font: e.target.value } }) },
-                                    FONTS.map(f => React.createElement('option', { key: f.value, value: f.value }, f.name))
-                                ),
-                                React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, '✅ Guardar')
-                            )
-                        )
-                    )
-                )
-            );
-        }
-
-        function ClientLoginScreen({ clients, selectedClientId, setSelectedClientId, clientPassword, setClientPassword, handleClientLogin, navigateTo, goBack }) {
-            return React.createElement('div', { className: 'container' },
-                React.createElement('div', { className: 'glass', style: { padding: '50px', maxWidth: '480px', width: '90%', background: 'rgba(255, 255, 255, 0.95)', color: '#000' } },
-                    React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => navigateTo('welcome'), style: { marginBottom: '1rem', width: '100%', background: '#f0f0f0', color: '#000', border: '2px solid #ddd' } }, '← Volver'),
-                    React.createElement('h2', { style: { color: '#000', textAlign: 'center' } }, 'VISIONARTE'),
-                    React.createElement('p', { style: { color: '#666', textAlign: 'center', marginBottom: '2rem' } }, 'Acceso Cliente'),
-                    React.createElement('form', { onSubmit: handleClientLogin, style: { display: 'grid', gap: '1rem' } },
-                        React.createElement('select', { value: selectedClientId, onChange: (e) => setSelectedClientId(e.target.value), required: true, style: { background: '#f0f0f0', color: '#000', border: '2px solid #ddd', marginBottom: 0 } },
-                            React.createElement('option', { value: '' }, '-- Tu carpeta --'),
-                            clients.filter(c => c.status === 'active').map(c => React.createElement('option', { key: c.id, value: c.id }, c.name))
-                        ),
-                        React.createElement('input', { type: 'password', placeholder: 'Contraseña', value: clientPassword, onChange: (e) => setClientPassword(e.target.value), required: true, style: { background: '#f0f0f0', color: '#000', border: '2px solid #ddd' } }),
-                        React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', marginBottom: 0 } }, 'Acceder')
-                    )
-                )
-            );
-        }
-
-        function ClientPortal({ client, navigateTo, setClientLogged, goBack, downloadVideo, openVideoPreview }) {
-            const randomMsg = DATA.admin.welcomeMessages[Math.floor(Math.random() * DATA.admin.welcomeMessages.length)];
-
-            return React.createElement('div', { className: 'main-content' },
-                React.createElement('div', { style: { maxWidth: '1200px', margin: '0 auto' } },
-                    React.createElement('div', { className: 'header-top' },
-                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem' } },
-                            React.createElement('button', { className: 'btn btn-secondary btn-back', onClick: goBack }, '← Atrás'),
-                            React.createElement('div', null,
-                                React.createElement('div', { className: 'logo', style: { fontSize: '2rem' } },
-                                    React.createElement('span', { className: 'logo-icon' }, '🎬'),
-                                    React.createElement('span', null, 'VISIONARTE')
-                                ),
-                                React.createElement('div', { style: { color: client.color, fontWeight: '600', marginTop: '0.5rem', fontFamily: client.font } }, `📁 ${client.name}`)
-                            )
-                        ),
-                        React.createElement('button', { className: 'btn btn-secondary btn-small', onClick: () => { setClientLogged(null); navigateTo('welcome'); } }, 'Salir')
-                    ),
-
-                    React.createElement('div', { style: { background: 'rgba(255, 215, 0, 0.08)', borderLeft: '4px solid #ffd700', padding: '20px', borderRadius: '12px', marginBottom: '2rem', fontFamily: client.font } },
-                        React.createElement('strong', { style: { color: client.color } }, `✨ ${randomMsg}`)
-                    ),
-
-                    client.videos.length === 0 ? 
-                        React.createElement('div', { className: 'glass', style: { padding: '60px', textAlign: 'center' } },
-                            React.createElement('div', { style: { fontSize: '3rem', marginBottom: '1rem' } }, '🎬'),
-                            React.createElement('h2', null, 'Tus videos en 4K'),
-                            React.createElement('p', { className: 'subtitle' }, 'Tu videógrafo está preparando tu contenido.')
-                        ) :
-                        React.createElement('div', { className: 'glass', style: { padding: '30px' } },
-                            React.createElement('h2', null, 'Tus Archivos 📹'),
-                            client.videos.map((video, idx) => React.createElement('div', { key: idx, className: 'video-item' },
-                                React.createElement('div', { className: 'video-info' },
-                                    React.createElement('div', { style: { color: '#ffd700', fontWeight: '600', marginBottom: '0.5rem' } }, video.name),
-                                    React.createElement('div', { style: { color: '#888', fontSize: '0.85rem' } }, `${formatFileSize(video.size || 0)} • ${video.uploadedDate}`)
-                                ),
-                                React.createElement('div', { className: 'video-buttons' },
-                                    React.createElement('button', { className: 'btn btn-primary btn-small', onClick: () => openVideoPreview(video) }, '👁️ Ver'),
-                                    React.createElement('button', { className: 'btn btn-primary btn-small', onClick: () => downloadVideo(video) }, '⬇️ Descargar')
-                                )
-                            ))
-                        ),
-
-                    DATA.admin.socialLinks.length > 0 && React.createElement('div', { style: { marginTop: '3rem', textAlign: 'center' } },
-                        React.createElement('p', { style: { color: '#b0b0b0', marginBottom: '1.5rem' } }, 'Síguenos:'),
-                        React.createElement('div', { style: { display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' } },
-                            DATA.admin.socialLinks.map((social, idx) => React.createElement('a', { key: idx, href: social.url, target: '_blank', rel: 'noopener noreferrer', style: { color: '#ffd700', textDecoration: 'none', fontWeight: '600' } }, social.name))
-                        )
-                    )
-                )
-            );
-        }
-
-        ReactDOM.createRoot(document.getElementById('app')).render(React.createElement(App));
     </script>
 </body>
 </html>
