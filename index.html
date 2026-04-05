@@ -1189,6 +1189,7 @@
                                     <th>Grabación</th>
                                     <th>Entrega</th>
                                     <th>Días</th>
+                                    <th style="text-align: center; width: 60px;">Editar</th>
                                 </tr>
                             </thead>
                             <tbody id="reportTableBody"></tbody>
@@ -2078,9 +2079,12 @@
                 row.innerHTML = `
                     <td>${i + 1}</td>
                     <td>${video.name}</td>
-                    <td>${new Date(video.uploadedDate).toLocaleDateString('es-ES')}</td>
-                    <td>${video.fechaEntrega}</td>
+                    <td><span id="fecha_grab_${i}">${new Date(video.uploadedDate).toLocaleDateString('es-ES')}</span></td>
+                    <td><span id="fecha_ent_${i}">${video.fechaEntrega}</span></td>
                     <td>${Math.floor((new Date(video.fechaEntrega) - new Date(video.uploadedDate)) / (1000 * 60 * 60 * 24))}</td>
+                    <td style="text-align: center;">
+                        <button onclick="editReportDate('${clientName}', '${month}', ${i})" style="background: #ffd700; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">✏️</button>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
@@ -2095,16 +2099,329 @@
                 return;
             }
             
-            const element = document.getElementById('reportContainer');
-            const opt = {
-                margin: 10,
-                filename: `visionarte_informe_${clientName}_${month}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-            };
+            const videos = DATA.reports[clientName]?.[month];
+            if (!videos || videos.length === 0) {
+                alert('❌ No hay vídeos para este cliente y mes');
+                return;
+            }
             
-            html2pdf().set(opt).from(element).save();
+            // Calcular estadísticas
+            const totalSize = videos.reduce((sum, v) => sum + (v.size || 0), 0);
+            const totalSizeGB = (totalSize / (1024 * 1024 * 1024)).toFixed(2);
+            const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+            
+            const avgDays = videos.reduce((sum, v) => {
+                const grabacion = new Date(v.uploadedDate);
+                const entrega = new Date(v.fechaEntrega);
+                return sum + Math.floor((entrega - grabacion) / (1000 * 60 * 60 * 24));
+            }, 0) / videos.length;
+            
+            const monthName = new Date(month + '-01').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            
+            // Generar HTML
+            let htmlContent = `
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Informe - ${clientName}</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            color: #333; 
+                            background: #f5f5f5;
+                            padding: 20px;
+                            line-height: 1.6;
+                        }
+                        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { 
+                            background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+                            color: #ffd700;
+                            padding: 30px;
+                            border-radius: 8px;
+                            margin-bottom: 30px;
+                            text-align: center;
+                        }
+                        .header h1 { font-size: 32px; margin-bottom: 5px; font-weight: 900; }
+                        .header p { font-size: 14px; color: #fff; }
+                        .info-section {
+                            background: #f9f9f9;
+                            padding: 20px;
+                            border-radius: 8px;
+                            border-left: 4px solid #ffd700;
+                            margin-bottom: 30px;
+                        }
+                        .info-section h3 { color: #000; font-size: 16px; margin-bottom: 10px; }
+                        .info-row { 
+                            display: flex;
+                            justify-content: space-between;
+                            padding: 8px 0;
+                            border-bottom: 1px solid #eee;
+                            font-size: 13px;
+                        }
+                        .info-row:last-child { border-bottom: none; }
+                        .info-row strong { color: #000; }
+                        .stats-container {
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 20px;
+                            margin-bottom: 30px;
+                        }
+                        .stat-box {
+                            background: #f0f0f0;
+                            padding: 20px;
+                            border-radius: 8px;
+                            text-align: center;
+                            border-left: 4px solid #ffd700;
+                        }
+                        .stat-box .value { font-size: 28px; font-weight: bold; color: #ffd700; margin-bottom: 5px; }
+                        .stat-box .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+                        table { 
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 30px;
+                            font-size: 13px;
+                        }
+                        thead { background: #000; color: #ffd700; }
+                        th { 
+                            padding: 15px;
+                            text-align: left;
+                            font-weight: 700;
+                            border-bottom: 2px solid #ffd700;
+                        }
+                        td { 
+                            padding: 12px 15px;
+                            border-bottom: 1px solid #e0e0e0;
+                        }
+                        tbody tr:nth-child(even) { background: #f9f9f9; }
+                        tbody tr:hover { background: #f0f0f0; }
+                        .footer {
+                            text-align: center;
+                            color: #999;
+                            font-size: 11px;
+                            margin-top: 40px;
+                            padding-top: 20px;
+                            border-top: 1px solid #e0e0e0;
+                        }
+                        .total-box {
+                            background: #fff3cd;
+                            border: 2px solid #ffd700;
+                            padding: 15px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            text-align: center;
+                            font-weight: bold;
+                            color: #000;
+                        }
+                        @media print {
+                            body { background: #fff; padding: 0; }
+                            .container { box-shadow: none; padding: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>VISIONARTE</h1>
+                            <p>Sistema Profesional de Entrega</p>
+                        </div>
+
+                        <div class="info-section">
+                            <h3>Información del Informe</h3>
+                            <div class="info-row">
+                                <strong>Cliente:</strong>
+                                <span>${clientName}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Período:</strong>
+                                <span>${monthName}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Fecha del Informe:</strong>
+                                <span>${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                            </div>
+                        </div>
+
+                        <div class="stats-container">
+                            <div class="stat-box">
+                                <div class="value">${videos.length}</div>
+                                <div class="label">Vídeos</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value">${avgDays.toFixed(1)}</div>
+                                <div class="label">Días Promedio Entrega</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value">${totalSizeGB}</div>
+                                <div class="label">GB Totales</div>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Vídeo</th>
+                                    <th style="width: 15%;">Grabación</th>
+                                    <th style="width: 15%;">Entrega</th>
+                                    <th style="width: 10%;">Días</th>
+                                    <th style="width: 10%;">Tamaño</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+            
+            // Agregar videos
+            videos.forEach((video, i) => {
+                const fechaGrab = new Date(video.uploadedDate).toLocaleDateString('es-ES');
+                const fechaEnt = video.fechaEntrega;
+                const dias = Math.floor((new Date(video.fechaEntrega) - new Date(video.uploadedDate)) / (1000 * 60 * 60 * 24));
+                const sizeGB = (video.size / (1024 * 1024 * 1024)).toFixed(2);
+                
+                htmlContent += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${video.name}</td>
+                        <td>${fechaGrab}</td>
+                        <td>${fechaEnt}</td>
+                        <td>${dias}</td>
+                        <td>${sizeGB} GB</td>
+                    </tr>
+                `;
+            });
+            
+            htmlContent += `
+                            </tbody>
+                        </table>
+
+                        <div class="total-box">
+                            📊 Tamaño Total: ${totalSizeGB} GB (${totalSizeMB} MB)
+                        </div>
+
+                        <div class="footer">
+                            <p>Informe generado por VISIONARTE - Sistema Profesional de Entrega</p>
+                            <p>Ibiza, España | ${new Date().toLocaleString('es-ES')}</p>
+                            <p>Este documento contiene información confidencial y de uso exclusivo del cliente.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            // Descargar como HTML
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VISIONARTE_Informe_${clientName}_${month}.html`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification('✓ Informe descargado correctamente', 'success');
+        }
+        
+        function editReportDate(clientName, month, videoIndex) {
+            const videos = DATA.reports[clientName]?.[month];
+            if (!videos || !videos[videoIndex]) {
+                alert('Error: Video no encontrado');
+                return;
+            }
+            
+            const video = videos[videoIndex];
+            const fechaGrab = new Date(video.uploadedDate).toISOString().split('T')[0];
+            const fechaEnt = video.fechaEntrega;
+            
+            // Crear modal con calendario
+            const modal = document.createElement('div');
+            modal.id = 'editDateModal_' + videoIndex;
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 25px; backdrop-filter: blur(20px); max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
+                    <h3 style="color: #ffd700; margin: 0 0 10px 0; font-family: 'Inter Black', sans-serif; font-size: 1.2rem;">Editar Fechas</h3>
+                    <p style="color: #aaa; margin: 0 0 20px 0; font-size: 0.9rem; font-weight: 500;">${video.name}</p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="color: #fff; display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem;">📅 Fecha de Grabación</label>
+                        <input type="date" id="editGrab_${videoIndex}" value="${fechaGrab}" style="width: 100%; padding: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: #fff; font-family: 'Inter', sans-serif; box-sizing: border-box; font-size: 0.95rem; cursor: pointer;">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="color: #fff; display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem;">📅 Fecha de Entrega</label>
+                        <input type="date" id="editEnt_${videoIndex}" value="${fechaEnt}" style="width: 100%; padding: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: #fff; font-family: 'Inter', sans-serif; box-sizing: border-box; font-size: 0.95rem; cursor: pointer;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button id="saveBtn_${videoIndex}" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); border: none; border-radius: 6px; color: #000; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.95rem; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            ✓ Guardar
+                        </button>
+                        <button id="cancelBtn_${videoIndex}" style="flex: 1; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.95rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">
+                            ✕ Cancelar
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Event listeners
+            document.getElementById('saveBtn_' + videoIndex).addEventListener('click', function() {
+                const newGrab = document.getElementById('editGrab_' + videoIndex).value;
+                const newEnt = document.getElementById('editEnt_' + videoIndex).value;
+                
+                if (!newGrab || !newEnt) {
+                    alert('❌ Debes llenar ambas fechas');
+                    return;
+                }
+                
+                // Actualizar en DATA.reports
+                DATA.reports[clientName][month][videoIndex].uploadedDate = new Date(newGrab).toISOString();
+                DATA.reports[clientName][month][videoIndex].fechaEntrega = newEnt;
+                
+                // Actualizar también en DATA.clients
+                const client = DATA.clients.find(c => c.name === clientName);
+                if (client) {
+                    const clientVideo = client.videos.find(v => v.id === video.id);
+                    if (clientVideo) {
+                        clientVideo.uploadedDate = new Date(newGrab).toISOString();
+                        clientVideo.fechaEntrega = newEnt;
+                    }
+                }
+                
+                // GUARDAR
+                saveData();
+                
+                // Cerrar modal
+                const modalEl = document.getElementById('editDateModal_' + videoIndex);
+                if (modalEl) modalEl.remove();
+                
+                // Actualizar tabla
+                document.getElementById('fecha_grab_' + videoIndex).textContent = new Date(newGrab).toLocaleDateString('es-ES');
+                document.getElementById('fecha_ent_' + videoIndex).textContent = newEnt;
+                
+                // Recargar
+                setTimeout(() => loadClientReport(), 200);
+            });
+            
+            document.getElementById('cancelBtn_' + videoIndex).addEventListener('click', function() {
+                const modalEl = document.getElementById('editDateModal_' + videoIndex);
+                if (modalEl) modalEl.remove();
+            });
         }
         
         function refreshClientPortalUI() {
@@ -2212,60 +2529,223 @@
                 return;
             }
             
-            let html = `
-                <div style="padding: 40px; max-width: 800px; margin: 0 auto; font-family: 'Inter', Arial, sans-serif; background: white; color: #333;">
-                    <h1 style="color: #ffd700; margin-bottom: 10px; font-family: 'Inter'; font-weight: 900;">VISIONARTE</h1>
-                    <h2 style="margin-bottom: 30px; color: #333;">Informe Mensual de Videos</h2>
-                    
-                    <div style="background: #f5f5f5; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #ddd;">
-                        <p><strong>Cliente:</strong> ${client.name}</p>
-                        <p><strong>Mes:</strong> ${new Date(monthKey + '-01').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</p>
-                        <p><strong>Total Videos:</strong> ${videos.length}</p>
-                    </div>
-                    
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                        <thead>
-                            <tr style="background: #ffd700;">
-                                <th style="padding: 12px; text-align: left;">#</th>
-                                <th style="padding: 12px; text-align: left;">Título</th>
-                                <th style="padding: 12px; text-align: left;">Grabación</th>
-                                <th style="padding: 12px; text-align: left;">Entrega</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+            // Calcular estadísticas
+            const totalSize = videos.reduce((sum, v) => sum + (v.size || 0), 0);
+            const totalSizeGB = (totalSize / (1024 * 1024 * 1024)).toFixed(2);
+            const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+            
+            const avgDays = videos.reduce((sum, v) => {
+                const grabacion = new Date(v.uploadedDate);
+                const entrega = new Date(v.fechaEntrega);
+                return sum + Math.floor((entrega - grabacion) / (1000 * 60 * 60 * 24));
+            }, 0) / videos.length;
+            
+            const monthName = new Date(monthKey + '-01').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            
+            // Generar HTML COMPLETO
+            let htmlContent = `
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Mi Informe - ${client.name}</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            color: #333; 
+                            background: #f5f5f5;
+                            padding: 20px;
+                            line-height: 1.6;
+                        }
+                        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .header { 
+                            background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+                            color: #ffd700;
+                            padding: 30px;
+                            border-radius: 8px;
+                            margin-bottom: 30px;
+                            text-align: center;
+                        }
+                        .header h1 { font-size: 32px; margin-bottom: 5px; font-weight: 900; }
+                        .header p { font-size: 14px; color: #fff; }
+                        .info-section {
+                            background: #f9f9f9;
+                            padding: 20px;
+                            border-radius: 8px;
+                            border-left: 4px solid #ffd700;
+                            margin-bottom: 30px;
+                        }
+                        .info-section h3 { color: #000; font-size: 16px; margin-bottom: 10px; }
+                        .info-row { 
+                            display: flex;
+                            justify-content: space-between;
+                            padding: 8px 0;
+                            border-bottom: 1px solid #eee;
+                            font-size: 13px;
+                        }
+                        .info-row:last-child { border-bottom: none; }
+                        .info-row strong { color: #000; }
+                        .stats-container {
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 20px;
+                            margin-bottom: 30px;
+                        }
+                        .stat-box {
+                            background: #f0f0f0;
+                            padding: 20px;
+                            border-radius: 8px;
+                            text-align: center;
+                            border-left: 4px solid #ffd700;
+                        }
+                        .stat-box .value { font-size: 28px; font-weight: bold; color: #ffd700; margin-bottom: 5px; }
+                        .stat-box .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+                        table { 
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 30px;
+                            font-size: 13px;
+                        }
+                        thead { background: #000; color: #ffd700; }
+                        th { 
+                            padding: 15px;
+                            text-align: left;
+                            font-weight: 700;
+                            border-bottom: 2px solid #ffd700;
+                        }
+                        td { 
+                            padding: 12px 15px;
+                            border-bottom: 1px solid #e0e0e0;
+                        }
+                        tbody tr:nth-child(even) { background: #f9f9f9; }
+                        tbody tr:hover { background: #f0f0f0; }
+                        .footer {
+                            text-align: center;
+                            color: #999;
+                            font-size: 11px;
+                            margin-top: 40px;
+                            padding-top: 20px;
+                            border-top: 1px solid #e0e0e0;
+                        }
+                        .total-box {
+                            background: #fff3cd;
+                            border: 2px solid #ffd700;
+                            padding: 15px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            text-align: center;
+                            font-weight: bold;
+                            color: #000;
+                        }
+                        @media print {
+                            body { background: #fff; padding: 0; }
+                            .container { box-shadow: none; padding: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>VISIONARTE</h1>
+                            <p>Mi Informe Mensual</p>
+                        </div>
+
+                        <div class="info-section">
+                            <h3>Información del Informe</h3>
+                            <div class="info-row">
+                                <strong>Mi Nombre:</strong>
+                                <span>${client.name}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Período:</strong>
+                                <span>${monthName}</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Fecha del Informe:</strong>
+                                <span>${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                            </div>
+                        </div>
+
+                        <div class="stats-container">
+                            <div class="stat-box">
+                                <div class="value">${videos.length}</div>
+                                <div class="label">Vídeos</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value">${avgDays.toFixed(1)}</div>
+                                <div class="label">Días Promedio Entrega</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value">${totalSizeGB}</div>
+                                <div class="label">GB Totales</div>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Vídeo</th>
+                                    <th style="width: 15%;">Grabación</th>
+                                    <th style="width: 15%;">Entrega</th>
+                                    <th style="width: 10%;">Días</th>
+                                    <th style="width: 10%;">Tamaño</th>
+                                </tr>
+                            </thead>
+                            <tbody>
             `;
             
+            // Agregar videos
             videos.forEach((video, i) => {
-                html += `
-                    <tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 12px;">${i + 1}</td>
-                        <td style="padding: 12px;">${video.name}</td>
-                        <td style="padding: 12px;">${new Date(video.uploadedDate).toLocaleDateString('es-ES')}</td>
-                        <td style="padding: 12px;">${video.fechaEntrega}</td>
+                const fechaGrab = new Date(video.uploadedDate).toLocaleDateString('es-ES');
+                const fechaEnt = video.fechaEntrega;
+                const dias = Math.floor((new Date(video.fechaEntrega) - new Date(video.uploadedDate)) / (1000 * 60 * 60 * 24));
+                const sizeGB = (video.size / (1024 * 1024 * 1024)).toFixed(2);
+                
+                htmlContent += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${video.name}</td>
+                        <td>${fechaGrab}</td>
+                        <td>${fechaEnt}</td>
+                        <td>${dias}</td>
+                        <td>${sizeGB} GB</td>
                     </tr>
                 `;
             });
             
-            html += `
-                        </tbody>
-                    </table>
-                    
-                    <div style="text-align: center; color: #999; font-size: 12px;">
-                        <p>Generado por VISIONARTE</p>
-                        <p>@visionarte.videos</p>
+            htmlContent += `
+                            </tbody>
+                        </table>
+
+                        <div class="total-box">
+                            📊 Tamaño Total: ${totalSizeGB} GB (${totalSizeMB} MB)
+                        </div>
+
+                        <div class="footer">
+                            <p>Informe generado por VISIONARTE - Sistema Profesional de Entrega</p>
+                            <p>Ibiza, España | ${new Date().toLocaleString('es-ES')}</p>
+                            <p>Mi información confidencial de uso exclusivo.</p>
+                        </div>
                     </div>
-                </div>
+                </body>
+                </html>
             `;
             
-            const opt = {
-                margin: 10,
-                filename: `visionarte_mi_informe_${monthKey}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-            };
+            // Descargar como HTML
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VISIONARTE_Mi_Informe_${monthKey}.html`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
             
-            html2pdf().set(opt).from(html).save();
+            showNotification('✓ Tu informe se descargó correctamente', 'success');
         }
         
         function exportData() {
