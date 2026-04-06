@@ -1341,8 +1341,93 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    
     <script>
         const STORAGE_KEY = 'VISIONARTE_DATA_v5_4_1';
+        
+        // ============ FIREBASE CONFIGURATION ============
+        // IMPORTANTE: Reemplaza estas credenciales con las tuyas en Firebase Console
+        const firebaseConfig = {
+            apiKey: "AIzaSyDemonstration_Key_For_Local_Testing",
+            authDomain: "visionarte-delivery.firebaseapp.com",
+            databaseURL: "https://visionarte-delivery-default-rtdb.firebaseio.com",
+            projectId: "visionarte-delivery",
+            storageBucket: "visionarte-delivery.appspot.com",
+            messagingSenderId: "123456789000",
+            appId: "1:123456789000:web:abcdef1234567890"
+        };
+        
+        let FIREBASE_DB = null;
+        let FIREBASE_SYNCING = false;
+        
+        function initFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                FIREBASE_DB = firebase.database();
+                console.log('✅ Firebase inicializado');
+                syncDataFromFirebase();
+                return true;
+            } catch (e) {
+                console.error('Firebase error:', e);
+                // Si Firebase falla, usa localStorage como fallback
+                console.log('⚠️ Firebase no disponible, usando localStorage');
+                return false;
+            }
+        }
+        
+        function syncDataToFirebase() {
+            if (!FIREBASE_DB || FIREBASE_SYNCING) return;
+            
+            FIREBASE_SYNCING = true;
+            
+            // Guardar metadata en Firebase (sin videos Blob)
+            const dataToSync = {
+                ...DATA,
+                lastSync: new Date().toISOString()
+            };
+            
+            FIREBASE_DB.ref('visionarte/data').set(dataToSync).then(() => {
+                FIREBASE_SYNCING = false;
+                console.log('✅ Datos sincronizados a Firebase');
+            }).catch(err => {
+                FIREBASE_SYNCING = false;
+                console.error('Error sincronizando Firebase:', err);
+            });
+        }
+        
+        function syncDataFromFirebase() {
+            if (!FIREBASE_DB) return;
+            
+            FIREBASE_DB.ref('visionarte/data').on('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const remoteData = snapshot.val();
+                    
+                    // Sincronizar clientes (no sobrescribir videos locales)
+                    if (remoteData.clients) {
+                        DATA.clients = remoteData.clients;
+                    }
+                    
+                    if (remoteData.admin) {
+                        DATA.admin = remoteData.admin;
+                    }
+                    
+                    if (remoteData.movementLog) {
+                        DATA.movementLog = remoteData.movementLog;
+                    }
+                    
+                    if (remoteData.reports) {
+                        DATA.reports = remoteData.reports;
+                    }
+                    
+                    console.log('✅ Datos sincronizados desde Firebase');
+                    refreshAdminUI();
+                }
+            });
+        }
         
         // ============ INDEXEDDB SETUP ============
         let IDB_DATABASE = null;
@@ -1403,8 +1488,9 @@
             });
         }
         
-        // Inicializar IndexedDB al cargar
+        // Inicializar IndexedDB y Firebase al cargar
         initIndexedDB();
+        initFirebase();
         const COLORS = ['#ffd700', '#00ff88', '#ff6b9d', '#00bfff', '#9d4edd', '#ff6b35', '#ff006e', '#06ffa5', '#00d9ff', '#ff9f1c'];
         
         let DATA = {
@@ -1461,7 +1547,13 @@
         
         function saveData() {
             DATA.lastUpdated = new Date().toISOString();
+            
+            // Guardar en localStorage (fallback)
             localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+            
+            // Guardar en Firebase
+            syncDataToFirebase();
+            
             updateStorageUsage();
         }
         
