@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISIONARTE Premium Delivery v5.4.1</title>
+    <title>VISIONARTE Premium Delivery v5.9 - Cloudinary</title>
     
     <!-- PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Cloudinary Widget -->
+    <script src="https://upload-widget.cloudinary.com/latest/index.js" type="text/javascript"></script>
     
     <!-- Google Fonts - INTER BLACK + Playfair -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:wght@700&family=Poppins:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
@@ -1341,92 +1344,53 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
-    
     <script>
         const STORAGE_KEY = 'VISIONARTE_DATA_v5_4_1';
         
-        // ============ FIREBASE CONFIGURATION ============
-        // IMPORTANTE: Reemplaza estas credenciales con las tuyas en Firebase Console
-        const firebaseConfig = {
-            apiKey: "AIzaSyDemonstration_Key_For_Local_Testing",
-            authDomain: "visionarte-delivery.firebaseapp.com",
-            databaseURL: "https://visionarte-delivery-default-rtdb.firebaseio.com",
-            projectId: "visionarte-delivery",
-            storageBucket: "visionarte-delivery.appspot.com",
-            messagingSenderId: "123456789000",
-            appId: "1:123456789000:web:abcdef1234567890"
+        // ============ CLOUDINARY CONFIGURATION ============
+        const CLOUDINARY_CONFIG = {
+            cloudName: 'daigts65r',
+            apiKey: '162541418876743',
+            apiSecret: 'IjpsKc0apHTYtht7fFoVOPelm9Q',
+            uploadPreset: 'visionarte_videos' // Crear en Cloudinary Console
         };
         
-        let FIREBASE_DB = null;
-        let FIREBASE_SYNCING = false;
-        
-        function initFirebase() {
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
+        // ============ CLOUDINARY UPLOAD WIDGET ============
+        function openCloudinaryUpload(clientId) {
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (!client) return;
+            
+            const myWidget = cloudinary.createUploadWidget(
+                {
+                    cloudName: CLOUDINARY_CONFIG.cloudName,
+                    uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
+                    resourceType: 'video',
+                    maxFileSize: 5368709120 // 5GB
+                },
+                (error, result) => {
+                    if (!error && result && result.event === 'success') {
+                        // Video subido exitosamente
+                        const video = {
+                            id: 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9),
+                            name: result.info.original_filename,
+                            size: result.info.bytes,
+                            uploadedDate: new Date().toISOString(),
+                            cloudinaryId: result.info.public_id,
+                            cloudinaryUrl: result.info.secure_url,
+                            isLocal: false,
+                            dateAdded: new Date().toISOString()
+                        };
+                        
+                        client.videos.push(video);
+                        saveData();
+                        logMovement(`🎬 ${client.name}: "${video.name}" subido a Cloudinary`);
+                        showNotification(`✓ Video subido a Cloudinary correctamente`, 'success');
+                        refreshAdminUI();
+                    }
                 }
-                FIREBASE_DB = firebase.database();
-                console.log('✅ Firebase inicializado');
-                syncDataFromFirebase();
-                return true;
-            } catch (e) {
-                console.error('Firebase error:', e);
-                // Si Firebase falla, usa localStorage como fallback
-                console.log('⚠️ Firebase no disponible, usando localStorage');
-                return false;
-            }
-        }
-        
-        function syncDataToFirebase() {
-            if (!FIREBASE_DB || FIREBASE_SYNCING) return;
+            );
             
-            FIREBASE_SYNCING = true;
-            
-            // Guardar metadata en Firebase (sin videos Blob)
-            const dataToSync = {
-                ...DATA,
-                lastSync: new Date().toISOString()
-            };
-            
-            FIREBASE_DB.ref('visionarte/data').set(dataToSync).then(() => {
-                FIREBASE_SYNCING = false;
-                console.log('✅ Datos sincronizados a Firebase');
-            }).catch(err => {
-                FIREBASE_SYNCING = false;
-                console.error('Error sincronizando Firebase:', err);
-            });
-        }
-        
-        function syncDataFromFirebase() {
-            if (!FIREBASE_DB) return;
-            
-            FIREBASE_DB.ref('visionarte/data').on('value', (snapshot) => {
-                if (snapshot.exists()) {
-                    const remoteData = snapshot.val();
-                    
-                    // Sincronizar clientes (no sobrescribir videos locales)
-                    if (remoteData.clients) {
-                        DATA.clients = remoteData.clients;
-                    }
-                    
-                    if (remoteData.admin) {
-                        DATA.admin = remoteData.admin;
-                    }
-                    
-                    if (remoteData.movementLog) {
-                        DATA.movementLog = remoteData.movementLog;
-                    }
-                    
-                    if (remoteData.reports) {
-                        DATA.reports = remoteData.reports;
-                    }
-                    
-                    console.log('✅ Datos sincronizados desde Firebase');
-                    refreshAdminUI();
-                }
-            });
+            myWidget.open();
         }
         
         // ============ INDEXEDDB SETUP ============
@@ -1488,9 +1452,8 @@
             });
         }
         
-        // Inicializar IndexedDB y Firebase al cargar
+        // Inicializar IndexedDB al cargar
         initIndexedDB();
-        initFirebase();
         const COLORS = ['#ffd700', '#00ff88', '#ff6b9d', '#00bfff', '#9d4edd', '#ff6b35', '#ff006e', '#06ffa5', '#00d9ff', '#ff9f1c'];
         
         let DATA = {
@@ -1547,13 +1510,7 @@
         
         function saveData() {
             DATA.lastUpdated = new Date().toISOString();
-            
-            // Guardar en localStorage (fallback)
             localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
-            
-            // Guardar en Firebase
-            syncDataToFirebase();
-            
             updateStorageUsage();
         }
         
@@ -2114,57 +2071,14 @@
         
         function uploadVideos() {
             const clientId = document.getElementById('clientSelectUpload').value;
-            const files = document.getElementById('videoInput').files;
             
             if (!clientId) {
-                alert('❌ Selecciona un cliente');
+                showNotification('❌ Selecciona un cliente', 'error');
                 return;
             }
             
-            if (files.length === 0) {
-                alert('❌ Selecciona al menos un video');
-                return;
-            }
-            
-            const client = DATA.clients.find(c => c.id === clientId);
-            if (!client) return;
-            
-            const uploadProgress = document.getElementById('uploadProgress');
-            uploadProgress.style.display = 'block';
-            
-            let uploaded = 0;
-            let processedFiles = 0;
-            
-            Array.from(files).forEach(file => {
-                const videoId = 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9);
-                
-                // Guardar metadata en DATA
-                const video = {
-                    id: videoId,
-                    name: file.name,
-                    size: file.size,
-                    uploadedDate: new Date().toISOString(),
-                    isLocal: true,
-                    dateAdded: new Date().toISOString()
-                };
-                
-                client.videos.push(video);
-                
-                // Guardar Blob en IndexedDB
-                saveVideoToIDB(videoId, file).then(() => {
-                    processedFiles++;
-                    document.getElementById('uploadStatus').textContent = `Procesado ${processedFiles}/${files.length}...`;
-                    
-                    if (processedFiles === files.length) {
-                        saveData();
-                        logMovement(`🎬 ${processedFiles} video(s) subidos a "${client.name}"`);
-                        document.getElementById('videoInput').value = '';
-                        uploadProgress.style.display = 'none';
-                        showNotification(`✅ ${processedFiles} video(s) subidos correctamente`, 'success');
-                        refreshAdminUI();
-                    }
-                });
-            });
+            // Abre el widget de Cloudinary
+            openCloudinaryUpload(clientId);
         }
         
         function refreshAnalytics() {
@@ -2636,32 +2550,44 @@
                 return;
             }
             
-            // Obtener Blob de IndexedDB
+            // Si el video está en Cloudinary
+            if (video.cloudinaryUrl) {
+                const a = document.createElement('a');
+                a.href = video.cloudinaryUrl + '?dl=true';
+                a.download = videoName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Registrar descarga
+                client.downloads.push({
+                    videoId: videoId,
+                    timestamp: new Date().toISOString()
+                });
+                saveData();
+                logMovement(`⬇️ ${currentUser} descargó: ${videoName}`);
+                showNotification('✓ ' + videoName + ' descargado correctamente', 'success');
+                return;
+            }
+            
+            // Si está en IndexedDB (fallback)
             getVideoFromIDB(videoId).then(blob => {
                 if (!blob) {
                     showNotification('❌ Error al descargar el vídeo', 'error');
                     return;
                 }
                 
-                // Crear URL del Blob
                 const url = URL.createObjectURL(blob);
-                
-                // Crear link y descargar
                 const a = document.createElement('a');
                 a.href = url;
-                
-                // Detectar extensión original
-                const ext = videoName.includes('.') ? videoName.split('.').pop() : 'mp4';
                 a.download = videoName.replace(/[^a-zA-Z0-9._-]/g, '_');
                 
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 
-                // Liberar memoria
                 setTimeout(() => URL.revokeObjectURL(url), 100);
                 
-                // Registrar descarga
                 client.downloads.push({
                     videoId: videoId,
                     timestamp: new Date().toISOString()
