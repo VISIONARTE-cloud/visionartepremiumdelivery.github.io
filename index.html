@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISIONARTE Premium Delivery v6.0 - Firebase Cloud</title>
+    <title>VISIONARTE Premium Delivery v6.1 - Firebase Cloud</title>
     
     <!-- PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -993,7 +993,7 @@
         <div class="admin-header">
             <h2>Panel Admin</h2>
             <div class="admin-actions">
-                <div class="storage-info">☁️ Firebase Cloud: <span id="storageUsage" style="color: #4caf50;">Conectado</span></div>
+                <div class="storage-info">📊 localStorage: <span id="storageUsage">0</span> KB</div>
                 <button class="btn-logout" onclick="logout()">Salir</button>
             </div>
         </div>
@@ -1349,25 +1349,20 @@
     </div>
 
     <script>
+        const STORAGE_KEY = 'VISIONARTE_DATA_v5_4_1'; // backup local
+        
         // ============ FIREBASE CONFIGURATION ============
         const firebaseConfig = {
             apiKey: "AIzaSyC_MjyRnkqKsBrYmstb_cn0xiVPGnPNBRA",
             authDomain: "visionarte-41fb9.firebaseapp.com",
-            // ⚠️ IMPORTANTE: Después de crear la Realtime Database, actualiza esta URL.
-            // Si elegiste Europe: https://visionarte-41fb9-default-rtdb.europe-west1.firebasedatabase.app
-            // Si elegiste US: https://visionarte-41fb9-default-rtdb.firebaseio.com
             databaseURL: "https://visionarte-41fb9-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "visionarte-41fb9",
             storageBucket: "visionarte-41fb9.firebasestorage.app",
             messagingSenderId: "717660782008",
             appId: "1:717660782008:web:e76cb938c59b8d0f01a34d"
         };
-        
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
-        const DB = firebase.database();
-        const DB_REF = DB.ref('visionarte_data');
-        
+        const DB_REF = firebase.database().ref('visionarte_data');
         let FIREBASE_READY = false;
         let SAVE_TIMEOUT = null;
         
@@ -1417,14 +1412,23 @@
             myWidget.open();
         }
         
-        // ============ INDEXEDDB SETUP (fallback para videos locales) ============
+        // ============ INDEXEDDB SETUP ============
         let IDB_DATABASE = null;
         
         function initIndexedDB() {
             return new Promise((resolve) => {
                 const request = indexedDB.open('VISIONARTE', 1);
-                request.onerror = () => resolve(false);
-                request.onsuccess = () => { IDB_DATABASE = request.result; resolve(true); };
+                
+                request.onerror = () => {
+                    console.error('IndexedDB error:', request.error);
+                    resolve(false);
+                };
+                
+                request.onsuccess = () => {
+                    IDB_DATABASE = request.result;
+                    resolve(true);
+                };
+                
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     if (!db.objectStoreNames.contains('videos')) {
@@ -1436,10 +1440,10 @@
         
         function saveVideoToIDB(videoId, videoBlob) {
             return new Promise((resolve) => {
-                if (!IDB_DATABASE) return resolve(false);
                 const transaction = IDB_DATABASE.transaction(['videos'], 'readwrite');
                 const store = transaction.objectStore('videos');
                 const request = store.put({ id: videoId, blob: videoBlob });
+                
                 request.onsuccess = () => resolve(true);
                 request.onerror = () => resolve(false);
             });
@@ -1447,10 +1451,10 @@
         
         function getVideoFromIDB(videoId) {
             return new Promise((resolve) => {
-                if (!IDB_DATABASE) return resolve(null);
                 const transaction = IDB_DATABASE.transaction(['videos'], 'readonly');
                 const store = transaction.objectStore('videos');
                 const request = store.get(videoId);
+                
                 request.onsuccess = () => resolve(request.result?.blob || null);
                 request.onerror = () => resolve(null);
             });
@@ -1458,10 +1462,10 @@
         
         function deleteVideoFromIDB(videoId) {
             return new Promise((resolve) => {
-                if (!IDB_DATABASE) return resolve(false);
                 const transaction = IDB_DATABASE.transaction(['videos'], 'readwrite');
                 const store = transaction.objectStore('videos');
                 const request = store.delete(videoId);
+                
                 request.onsuccess = () => resolve(true);
                 request.onerror = () => resolve(false);
             });
@@ -1490,7 +1494,7 @@
             deletedClients: [],
             movementLog: [],
             reports: {},
-            dataVersion: '6.0.0',
+            dataVersion: '5.4.1',
             lastUpdated: new Date().toISOString()
         };
         
@@ -1510,18 +1514,11 @@
             document.getElementById('reportMonth').value = monthStr;
         }
         
-        // ============ FIREBASE LOAD/SAVE ============
         function loadData() {
-            // Mostrar estado de carga
-            document.getElementById('storageUsage').textContent = 'Cargando...';
-            document.getElementById('storageUsage').style.color = '#ffd700';
-            
             DB_REF.once('value').then((snapshot) => {
                 const stored = snapshot.val();
                 if (stored) {
-                    // Merge con defaults para que no falten campos
                     Object.assign(DATA, stored);
-                    // Asegurar arrays
                     if (!Array.isArray(DATA.clients)) DATA.clients = [];
                     if (!Array.isArray(DATA.archivedClients)) DATA.archivedClients = [];
                     if (!Array.isArray(DATA.deletedClients)) DATA.deletedClients = [];
@@ -1529,53 +1526,37 @@
                     if (!DATA.reports) DATA.reports = {};
                 }
                 FIREBASE_READY = true;
-                updateStorageUsage();
                 refreshAllUI();
-                console.log('✅ Firebase: datos cargados correctamente');
+                updateStorageUsage();
+                console.log('✅ Firebase conectado');
             }).catch((error) => {
                 console.error('❌ Firebase error:', error);
-                document.getElementById('storageUsage').textContent = 'Error conexión';
-                document.getElementById('storageUsage').style.color = '#ff6b6b';
-                // Fallback: intentar localStorage
-                const local = localStorage.getItem('VISIONARTE_DATA_v5_4_1');
+                // Fallback localStorage
+                const local = localStorage.getItem(STORAGE_KEY);
                 if (local) {
-                    try {
-                        Object.assign(DATA, JSON.parse(local));
-                        console.log('⚠️ Usando datos locales como fallback');
-                    } catch(e) {}
+                    try { Object.assign(DATA, JSON.parse(local)); } catch(e) {}
                 }
-                FIREBASE_READY = false;
                 refreshAllUI();
             });
         }
         
         function saveData() {
             DATA.lastUpdated = new Date().toISOString();
-            
-            // Debounce: espera 500ms antes de guardar para evitar escrituras excesivas
             clearTimeout(SAVE_TIMEOUT);
             SAVE_TIMEOUT = setTimeout(() => {
-                DB_REF.set(DATA).then(() => {
-                    console.log('✅ Firebase: datos guardados');
-                    updateStorageUsage();
-                }).catch((error) => {
-                    console.error('❌ Firebase save error:', error);
-                    document.getElementById('storageUsage').textContent = 'Error al guardar';
-                    document.getElementById('storageUsage').style.color = '#ff6b6b';
-                });
-            }, 500);
-            
+                DB_REF.set(DATA).catch((e) => console.error('Firebase save error:', e));
+            }, 300);
             // Backup local siempre
-            try {
-                localStorage.setItem('VISIONARTE_BACKUP', JSON.stringify(DATA));
-            } catch(e) {}
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); } catch(e) {}
         }
         
         function updateStorageUsage() {
             const el = document.getElementById('storageUsage');
             if (FIREBASE_READY) {
-                el.textContent = 'Conectado ✓';
+                el.textContent = '☁️ Firebase OK';
                 el.style.color = '#4caf50';
+            } else {
+                el.textContent = 'Conectando...';
             }
         }
         
@@ -1948,7 +1929,7 @@
                 registeredDate: new Date().toISOString().split('T')[0],
                 status: 'active',
                 deletionDate: null,
-                dataVersion: '6.0.0',
+                dataVersion: '5.4.1',
                 lastUpdated: new Date().toISOString()
             };
             
@@ -2753,21 +2734,6 @@
                 }
             };
             reader.readAsText(file);
-        }
-        
-        function showNotification(message, type) {
-            const notif = document.createElement('div');
-            notif.style.cssText = `
-                position: fixed; bottom: 30px; right: 30px; padding: 16px 28px;
-                background: ${type === 'error' ? '#ff6b6b' : type === 'success' ? '#4caf50' : '#ffd700'};
-                color: ${type === 'success' || type === 'error' ? '#fff' : '#000'};
-                border-radius: 12px; font-weight: 700; font-family: Inter, sans-serif;
-                font-size: 14px; z-index: 99999; animation: fadeInUp 0.3s ease-out;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            `;
-            notif.textContent = message;
-            document.body.appendChild(notif);
-            setTimeout(() => { notif.style.opacity = '0'; setTimeout(() => notif.remove(), 300); }, 3000);
         }
         
         function refreshAllUI() {
