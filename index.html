@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISIONARTE Premium Delivery v7.0 FINAL - Firebase Cloud</title>
+    <title>VISIONARTE Premium Delivery v7.1 FINAL - Firebase Cloud</title>
     
     <!-- PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -1405,6 +1405,7 @@
                             dateAdded: new Date().toISOString()
                         };
                         
+                        if (!Array.isArray(client.videos)) client.videos = [];
                         client.videos.push(video);
                         saveData();
                         logMovement(`🎬 ${client.name}: "${video.name}" subido a Cloudinary`);
@@ -1535,6 +1536,7 @@
                         if (!Array.isArray(DATA.admin.welcomeMessages)) DATA.admin.welcomeMessages = [];
                     }
                     FIREBASE_READY = true;
+                    sanitizeData();
                     updateStorageUsage();
                     refreshAllUI();
                     console.log('✅ Firebase conectado correctamente');
@@ -1547,6 +1549,26 @@
             }
         }
         
+        // Firebase elimina arrays vacíos [] → undefined. Esta función los restaura.
+        function sanitizeData() {
+            if (!Array.isArray(DATA.clients)) DATA.clients = [];
+            DATA.clients.forEach(client => {
+                if (!Array.isArray(client.videos)) client.videos = [];
+                if (!Array.isArray(client.downloads)) client.downloads = [];
+                if (!client.color) client.color = '#ffd700';
+                if (!client.font) client.font = 'Inter';
+                if (!client.status) client.status = 'active';
+                if (!client.id) client.id = 'c_' + Date.now() + Math.random().toString(36).substr(2, 5);
+            });
+            if (!Array.isArray(DATA.archivedClients)) DATA.archivedClients = [];
+            if (!Array.isArray(DATA.deletedClients)) DATA.deletedClients = [];
+            if (!Array.isArray(DATA.movementLog)) DATA.movementLog = [];
+            if (!DATA.reports) DATA.reports = {};
+            if (!DATA.admin) DATA.admin = { password: 'admin123', socialLinks: [], welcomeMessages: [] };
+            if (!Array.isArray(DATA.admin.socialLinks)) DATA.admin.socialLinks = [];
+            if (!Array.isArray(DATA.admin.welcomeMessages)) DATA.admin.welcomeMessages = [];
+        }
+        
         function loadFromLocalStorage() {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
@@ -1557,6 +1579,7 @@
                     console.error('Error al cargar datos locales:', e);
                 }
             }
+            sanitizeData();
             updateStorageUsage();
             refreshAllUI();
         }
@@ -2068,17 +2091,22 @@
             active.forEach(client => {
                 const card = document.createElement('div');
                 card.className = 'client-card';
+                const cc = client.color || '#ffd700';
+                const vids = Array.isArray(client.videos) ? client.videos : [];
+                const dls = Array.isArray(client.downloads) ? client.downloads : [];
                 
+                card.style.borderTopColor = cc;
                 card.innerHTML = `
-                    <div class="client-name">${client.name}</div>
+                    <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${cc};border-radius:20px 20px 0 0;"></div>
+                    <div class="client-name" style="color:${cc};">${client.name}</div>
                     <div class="client-email">${client.email}</div>
                     <div class="client-stats">
                         <div class="stat">
-                            <div class="stat-number">${client.videos.length}</div>
+                            <div class="stat-number" style="color:${cc};">${vids.length}</div>
                             <div class="stat-label">Videos</div>
                         </div>
                         <div class="stat">
-                            <div class="stat-number">${client.downloads.length}</div>
+                            <div class="stat-number" style="color:${cc};">${dls.length}</div>
                             <div class="stat-label">Descargas</div>
                         </div>
                     </div>
@@ -2220,8 +2248,8 @@
         
         function refreshAnalytics() {
             const active = DATA.clients.filter(c => c.status === 'active');
-            const totalVideos = active.reduce((sum, c) => sum + c.videos.length, 0);
-            const totalDownloads = active.reduce((sum, c) => sum + c.downloads.length, 0);
+            const totalVideos = active.reduce((sum, c) => sum + (Array.isArray(c.videos) ? c.videos.length : 0), 0);
+            const totalDownloads = active.reduce((sum, c) => sum + (Array.isArray(c.downloads) ? c.downloads.length : 0), 0);
             
             document.getElementById('totalClients').textContent = active.length;
             document.getElementById('totalVideos').textContent = totalVideos;
@@ -2262,7 +2290,7 @@
             archived.forEach(client => {
                 const div = document.createElement('div');
                 div.innerHTML = `
-                    <strong>${client.name}</strong> (${client.videos.length} videos)
+                    <strong>${client.name}</strong> (${(client.videos || []).length} videos)
                     <button onclick="unarchiveClient('${client.id}')" style="margin-left: 10px; padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">Restaurar</button>
                 `;
                 div.style.cssText = 'padding: 14px; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(10px);';
@@ -2442,7 +2470,7 @@
                     DATA.reports[client.name] = {};
                 }
                 
-                client.videos.forEach(video => {
+                (client.videos || []).forEach(video => {
                     const uploadDate = new Date(video.uploadedDate);
                     const monthKey = uploadDate.toISOString().substring(0, 7);
                     
@@ -2669,13 +2697,14 @@
         function refreshClientVideos(client) {
             const container = document.getElementById('videosContainer');
             container.innerHTML = '';
+            const videos = Array.isArray(client.videos) ? client.videos : [];
             
-            if (client.videos.length === 0) {
+            if (videos.length === 0) {
                 container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #888;">Próximamente tendrás tus videos aquí.</p>';
                 return;
             }
             
-            client.videos.forEach(video => {
+            videos.forEach(video => {
                 const card = document.createElement('div');
                 card.className = 'video-card';
                 
@@ -2715,6 +2744,7 @@
                 document.body.removeChild(a);
                 
                 // Registrar descarga
+                if (!Array.isArray(client.downloads)) client.downloads = [];
                 client.downloads.push({
                     videoId: videoId,
                     timestamp: new Date().toISOString()
@@ -2743,6 +2773,7 @@
                 
                 setTimeout(() => URL.revokeObjectURL(url), 100);
                 
+                if (!Array.isArray(client.downloads)) client.downloads = [];
                 client.downloads.push({
                     videoId: videoId,
                     timestamp: new Date().toISOString()
