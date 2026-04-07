@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISIONARTE Premium Delivery v6.1 FINAL - Firebase Cloud</title>
+    <title>VISIONARTE Premium Delivery v7.0 FINAL - Firebase Cloud</title>
     
     <!-- PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -1351,20 +1351,25 @@
     <script>
         const STORAGE_KEY = 'VISIONARTE_DATA_v5_4_1'; // backup local
         
-        // ============ FIREBASE CONFIGURATION ============
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_MjyRnkqKsBrYmstb_cn0xiVPGnPNBRA",
-            authDomain: "visionarte-41fb9.firebaseapp.com",
-            databaseURL: "https://visionarte-41fb9-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "visionarte-41fb9",
-            storageBucket: "visionarte-41fb9.firebasestorage.app",
-            messagingSenderId: "717660782008",
-            appId: "1:717660782008:web:e76cb938c59b8d0f01a34d"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const DB_REF = firebase.database().ref('visionarte_data');
+        // ============ FIREBASE ============
         let FIREBASE_READY = false;
         let SAVE_TIMEOUT = null;
+        try {
+            const firebaseConfig = {
+                apiKey: "AIzaSyC_MjyRnkqKsBrYmstb_cn0xiVPGnPNBRA",
+                authDomain: "visionarte-41fb9.firebaseapp.com",
+                databaseURL: "https://visionarte-41fb9-default-rtdb.europe-west1.firebasedatabase.app",
+                projectId: "visionarte-41fb9",
+                storageBucket: "visionarte-41fb9.firebasestorage.app",
+                messagingSenderId: "717660782008",
+                appId: "1:717660782008:web:e76cb938c59b8d0f01a34d"
+            };
+            firebase.initializeApp(firebaseConfig);
+            var DB_REF = firebase.database().ref('visionarte_data');
+        } catch(e) {
+            console.warn('⚠️ Firebase SDK no disponible, usando localStorage');
+            var DB_REF = null;
+        }
         
         // ============ CLOUDINARY CONFIGURATION ============
         const CLOUDINARY_CONFIG = {
@@ -1494,7 +1499,7 @@
             deletedClients: [],
             movementLog: [],
             reports: {},
-            dataVersion: '6.1.0',
+            dataVersion: '7.0.0',
             lastUpdated: new Date().toISOString()
         };
         
@@ -1515,50 +1520,60 @@
         }
         
         function loadData() {
-            document.getElementById('storageUsage').textContent = 'Conectando...';
-            DB_REF.once('value').then((snapshot) => {
-                const stored = snapshot.val();
-                if (stored) {
-                    Object.assign(DATA, stored);
-                    if (!Array.isArray(DATA.clients)) DATA.clients = [];
-                    if (!Array.isArray(DATA.archivedClients)) DATA.archivedClients = [];
-                    if (!Array.isArray(DATA.deletedClients)) DATA.deletedClients = [];
-                    if (!Array.isArray(DATA.movementLog)) DATA.movementLog = [];
-                    if (!DATA.reports) DATA.reports = {};
-                    if (!DATA.admin) DATA.admin = { password: 'admin123', socialLinks: [], welcomeMessages: [] };
-                    if (!DATA.admin.socialLinks) DATA.admin.socialLinks = [];
-                    if (!DATA.admin.welcomeMessages) DATA.admin.welcomeMessages = [];
+            if (DB_REF) {
+                DB_REF.once('value').then((snapshot) => {
+                    const stored = snapshot.val();
+                    if (stored) {
+                        Object.assign(DATA, stored);
+                        if (!Array.isArray(DATA.clients)) DATA.clients = [];
+                        if (!Array.isArray(DATA.archivedClients)) DATA.archivedClients = [];
+                        if (!Array.isArray(DATA.deletedClients)) DATA.deletedClients = [];
+                        if (!Array.isArray(DATA.movementLog)) DATA.movementLog = [];
+                        if (!DATA.reports) DATA.reports = {};
+                        if (!DATA.admin) DATA.admin = { password: 'admin123', socialLinks: [], welcomeMessages: [] };
+                        if (!Array.isArray(DATA.admin.socialLinks)) DATA.admin.socialLinks = [];
+                        if (!Array.isArray(DATA.admin.welcomeMessages)) DATA.admin.welcomeMessages = [];
+                    }
+                    FIREBASE_READY = true;
+                    updateStorageUsage();
+                    refreshAllUI();
+                    console.log('✅ Firebase conectado correctamente');
+                }).catch((error) => {
+                    console.error('❌ Firebase error:', error);
+                    loadFromLocalStorage();
+                });
+            } else {
+                loadFromLocalStorage();
+            }
+        }
+        
+        function loadFromLocalStorage() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    Object.assign(DATA, parsed);
+                } catch (e) {
+                    console.error('Error al cargar datos locales:', e);
                 }
-                FIREBASE_READY = true;
-                updateStorageUsage();
-                refreshAllUI();
-                console.log('✅ Firebase conectado correctamente');
-            }).catch((error) => {
-                console.error('❌ Firebase error:', error);
-                // Fallback localStorage
-                const local = localStorage.getItem(STORAGE_KEY);
-                if (local) {
-                    try { Object.assign(DATA, JSON.parse(local)); } catch(e) {}
-                }
-                FIREBASE_READY = false;
-                updateStorageUsage();
-                refreshAllUI();
-            });
+            }
+            updateStorageUsage();
+            refreshAllUI();
         }
         
         function saveData() {
             DATA.lastUpdated = new Date().toISOString();
-            // Debounce Firebase writes
-            clearTimeout(SAVE_TIMEOUT);
-            SAVE_TIMEOUT = setTimeout(() => {
-                if (FIREBASE_READY) {
+            // Guardar en Firebase
+            if (DB_REF && FIREBASE_READY) {
+                clearTimeout(SAVE_TIMEOUT);
+                SAVE_TIMEOUT = setTimeout(() => {
                     DB_REF.set(DATA).then(() => {
-                        console.log('✅ Datos guardados en Firebase');
+                        console.log('✅ Guardado en Firebase');
                     }).catch((e) => {
-                        console.error('❌ Firebase save error:', e);
+                        console.error('❌ Error Firebase:', e);
                     });
-                }
-            }, 300);
+                }, 300);
+            }
             // Backup local siempre
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); } catch(e) {}
             updateStorageUsage();
@@ -1566,27 +1581,28 @@
         
         function updateStorageUsage() {
             const el = document.getElementById('storageUsage');
+            if (!el) return;
             if (FIREBASE_READY) {
                 el.textContent = '☁️ Firebase OK';
                 el.style.color = '#4caf50';
+            } else if (DB_REF === null) {
+                el.textContent = '💾 Local';
+                el.style.color = '#ff9f1c';
             } else {
-                el.textContent = '⚠️ Sin conexión';
-                el.style.color = '#ff6b6b';
+                el.textContent = 'Conectando...';
+                el.style.color = '#ffd700';
             }
         }
         
-        // ============ NOTIFICACIONES (FALTABA EN v5.9) ============
+        // ============ NOTIFICACIONES (faltaba en v5.9) ============
         function showNotification(message, type) {
             const notif = document.createElement('div');
-            const bgColor = type === 'error' ? '#ff6b6b' : type === 'success' ? 'linear-gradient(135deg, #4caf50, #2e7d32)' : 'linear-gradient(135deg, #ffd700, #ffab00)';
-            const txtColor = type === 'success' || type === 'error' ? '#fff' : '#000';
-            notif.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:16px 28px;background:' + bgColor + ';color:' + txtColor + ';border-radius:14px;font-weight:700;font-family:Inter,sans-serif;font-size:14px;z-index:99999;box-shadow:0 10px 40px rgba(0,0,0,0.4);animation:fadeInUp 0.3s ease-out;transition:opacity 0.3s;';
+            const bg = type === 'error' ? '#ff6b6b' : type === 'success' ? '#4caf50' : '#ffd700';
+            const txt = type === 'error' || type === 'success' ? '#fff' : '#000';
+            notif.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:16px 28px;background:' + bg + ';color:' + txt + ';border-radius:14px;font-weight:700;font-family:Inter,sans-serif;font-size:14px;z-index:99999;box-shadow:0 10px 40px rgba(0,0,0,0.4);animation:fadeInUp 0.3s ease-out;transition:opacity 0.3s;max-width:90vw;';
             notif.textContent = message;
             document.body.appendChild(notif);
-            setTimeout(() => {
-                notif.style.opacity = '0';
-                setTimeout(() => notif.remove(), 300);
-            }, 3000);
+            setTimeout(() => { notif.style.opacity = '0'; setTimeout(() => notif.remove(), 300); }, 3000);
         }
         
         function loginAdmin() {
@@ -1689,23 +1705,26 @@
             container.innerHTML = '';
             
             DATA.clients.forEach(client => {
+                const cc = client.color || '#daa520';
                 const carpeta = document.createElement('div');
                 carpeta.style.cssText = `
                     background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-                    border: 1px solid rgba(218, 165, 32, 0.3);
+                    border: 1px solid ${cc}50;
                     border-radius: 16px;
                     padding: 20px;
                     backdrop-filter: blur(10px);
                     cursor: pointer;
                     transition: all 0.3s;
+                    border-top: 3px solid ${cc};
                 `;
                 carpeta.onmouseover = () => {
-                    carpeta.style.background = 'linear-gradient(135deg, rgba(218, 165, 32, 0.2), rgba(218, 165, 32, 0.1))';
-                    carpeta.style.borderColor = 'rgba(218, 165, 32, 0.6)';
+                    carpeta.style.background = `linear-gradient(135deg, ${cc}33, ${cc}1a)`;
+                    carpeta.style.borderColor = cc;
                 };
                 carpeta.onmouseout = () => {
                     carpeta.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))';
-                    carpeta.style.borderColor = 'rgba(218, 165, 32, 0.3)';
+                    carpeta.style.borderColor = cc + '50';
+                    carpeta.style.borderTopColor = cc;
                 };
                 carpeta.onclick = () => viewClientFolder(client.id, client.name);
                 
@@ -1713,18 +1732,22 @@
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                         <div style="font-size: 2rem;">📁</div>
                         <div>
-                            <div style="font-size: 1.2rem; font-weight: 700; color: #daa520;">${client.name}</div>
+                            <div style="font-size: 1.2rem; font-weight: 700; color: ${cc};">${client.name}</div>
                             <div style="font-size: 0.9rem; color: #999;">${client.email}</div>
                         </div>
+                        <div style="margin-left:auto;width:14px;height:14px;border-radius:50%;background:${cc};"></div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 15px; border-top: 1px solid rgba(218, 165, 32, 0.2);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding-top: 15px; border-top: 1px solid ${cc}30;">
                         <div style="text-align: center;">
-                            <div style="color: #daa520; font-weight: 700; font-size: 1.3rem;">${client.videos ? client.videos.length : 0}</div>
+                            <div style="color: ${cc}; font-weight: 700; font-size: 1.3rem;">${client.videos ? client.videos.length : 0}</div>
                             <div style="color: #999; font-size: 0.85rem;">Videos</div>
                         </div>
                         <div style="text-align: center;">
-                            <div style="color: #daa520; font-weight: 700; font-size: 1.3rem;">${client.downloads ? client.downloads.length : 0}</div>
+                            <div style="color: ${cc}; font-weight: 700; font-size: 1.3rem;">${client.downloads ? client.downloads.length : 0}</div>
                             <div style="color: #999; font-size: 0.85rem;">Descargas</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="color: ${client.status === 'active' ? '#4caf50' : '#ff6b6b'}; font-weight: 700; font-size: 0.85rem;">${client.status === 'active' ? '● Activo' : '○ ' + client.status}</div>
                         </div>
                     </div>
                     <button class="btn-primary" style="width: 100%; margin-top: 15px;">Ver Carpeta →</button>
@@ -1772,19 +1795,22 @@
                     const sizeGB = (video.size / (1024 * 1024 * 1024)).toFixed(2);
                     const sizeMB = (video.size / (1024 * 1024)).toFixed(2);
                     const displaySize = sizeGB >= 1 ? sizeGB + ' GB' : sizeMB + ' MB';
+                    const statusLabel = video.status === 'archived' ? ' <span style="color:#ff9f1c;font-size:0.75rem;">(ARCHIVADO)</span>' : '';
                     
                     videosHTML += `
-                        <div style="background: rgba(218, 165, 32, 0.1); border-left: 3px solid #daa520; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                        <div style="background: rgba(218, 165, 32, 0.1); border-left: 3px solid #daa520; padding: 15px; margin-bottom: 15px; border-radius: 8px;${video.status === 'archived' ? ' opacity:0.5;' : ''}">
                             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
                                 <div>
-                                    <div style="font-weight: 700; color: #daa520; margin-bottom: 5px;">🎬 ${video.name}</div>
+                                    <div style="font-weight: 700; color: #daa520; margin-bottom: 5px;">🎬 ${video.name}${statusLabel}</div>
                                     <div style="font-size: 0.85rem; color: #999;">
                                         <div>📊 ${displaySize}</div>
                                         <div>📅 ${new Date(video.uploadedDate).toLocaleDateString('es-ES')}</div>
+                                        ${video.cloudinaryUrl ? '<div style="color:#4caf50;">☁️ Cloudinary</div>' : '<div style="color:#ff9f1c;">💾 Local</div>'}
                                     </div>
                                 </div>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top: 10px;">
+                                <button onclick="adminDownloadVideo('${clientId}', '${video.id}', '${video.name}')" style="background: #4caf50; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">⬇️ Descargar</button>
                                 <button onclick="archiveVideo('${clientId}', '${video.id}', '${video.name}', this.parentElement.parentElement)" style="background: #ff9f1c; border: none; color: black; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">📦 Archivar</button>
                                 <button onclick="replaceVideo('${clientId}', '${video.id}', '${video.name}', this.parentElement.parentElement)" style="background: #00d9ff; border: none; color: black; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🔄 Reemplazar</button>
                                 <button onclick="deleteVideo('${clientId}', '${video.id}', '${video.name}', this.parentElement.parentElement)" style="background: #ff006e; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🗑️ Eliminar</button>
@@ -1805,7 +1831,10 @@
                     <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #daa520; border: none; color: black; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700;">✕ Cerrar</button>
                 </div>
                 <div style="border-top: 1px solid #daa520; padding-top: 20px;">
-                    <h4 style="color: #daa520; margin-bottom: 15px;">Videos Subidos (${client.videos ? client.videos.length : 0})</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="color: #daa520; margin: 0;">Videos Subidos (${client.videos ? client.videos.length : 0})</h4>
+                        <button onclick="openCloudinaryUpload('${clientId}'); this.parentElement.parentElement.parentElement.parentElement.remove();" style="background: linear-gradient(135deg, #ffd700, #ffab00); border: none; color: black; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">📹 Subir Video</button>
+                    </div>
                     ${videosHTML}
                 </div>
             `;
@@ -1816,6 +1845,43 @@
             modal.onclick = (e) => {
                 if (e.target === modal) modal.remove();
             };
+        }
+        
+        function adminDownloadVideo(clientId, videoId, videoName) {
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (!client) return;
+            const video = client.videos.find(v => v.id === videoId);
+            if (!video) {
+                showNotification('❌ Video no encontrado', 'error');
+                return;
+            }
+            if (video.cloudinaryUrl) {
+                const a = document.createElement('a');
+                a.href = video.cloudinaryUrl + '?dl=true';
+                a.download = videoName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                logMovement(`⬇️ Admin descargó: ${videoName} (${client.name})`);
+                showNotification('✓ Descargando ' + videoName, 'success');
+            } else {
+                getVideoFromIDB(videoId).then(blob => {
+                    if (!blob) {
+                        showNotification('❌ No se encontró el archivo', 'error');
+                        return;
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = videoName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                    logMovement(`⬇️ Admin descargó: ${videoName} (${client.name})`);
+                    showNotification('✓ Descargando ' + videoName, 'success');
+                });
+            }
         }
         
         function archiveVideo(clientId, videoId, videoName, element) {
@@ -1888,14 +1954,12 @@
             input.click();
         }
         
-        function switchModalTab(tabName) {
+        function switchModalTab(tabName, btn) {
             document.querySelectorAll('.modal-tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.modal-tab-button').forEach(b => b.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
-            // Fix: use event from onclick context
-            if (window.event && window.event.target) {
-                window.event.target.classList.add('active');
-            }
+            if (btn) { btn.classList.add('active'); }
+            else if (window.event && window.event.target) { window.event.target.classList.add('active'); }
         }
         
         function openModal(modalId) {
@@ -1961,7 +2025,7 @@
                 registeredDate: new Date().toISOString().split('T')[0],
                 status: 'active',
                 deletionDate: null,
-                dataVersion: '6.1.0',
+                dataVersion: '7.0.0',
                 lastUpdated: new Date().toISOString()
             };
             
@@ -2563,8 +2627,26 @@
                 return;
             }
             
+            // Aplicar color y fuente del cliente
+            const clientColor = client.color || '#ffd700';
             document.getElementById('clientNameDisplay').textContent = `${client.name} 💎`;
-            document.getElementById('welcomeMsg').textContent = DATA.admin.welcomeMessages[Math.floor(Math.random() * DATA.admin.welcomeMessages.length)];
+            document.getElementById('clientNameDisplay').style.background = `linear-gradient(135deg, ${clientColor}, ${clientColor}dd)`;
+            document.getElementById('clientNameDisplay').style.webkitBackgroundClip = 'text';
+            document.getElementById('clientNameDisplay').style.webkitTextFillColor = 'transparent';
+            document.getElementById('clientNameDisplay').style.backgroundClip = 'text';
+            if (client.font) {
+                document.getElementById('clientNameDisplay').style.fontFamily = client.font + ', sans-serif';
+            }
+            
+            document.getElementById('welcomeMsg').textContent = DATA.admin.welcomeMessages[Math.floor(Math.random() * DATA.admin.welcomeMessages.length)] || '¡Bienvenido a VISIONARTE!';
+            document.getElementById('welcomeMsg').style.borderColor = clientColor;
+            document.getElementById('welcomeMsg').style.background = `linear-gradient(135deg, ${clientColor}1f 0%, ${clientColor}0d 100%)`;
+            
+            // Aplicar color a los botones de video
+            document.querySelectorAll('#clientPortal .btn-video').forEach(btn => {
+                btn.style.color = clientColor;
+                btn.style.borderColor = clientColor;
+            });
             
             refreshClientVideos(client);
             refreshClientReport(client);
