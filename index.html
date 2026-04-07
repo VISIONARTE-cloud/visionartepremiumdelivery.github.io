@@ -2269,9 +2269,64 @@
                 return;
             }
             
-            console.log('📹 Subiendo para cliente ID:', clientId);
-            // Abre el widget de Cloudinary
-            openCloudinaryUpload(clientId);
+            const client = DATA.clients.find(c => c.id === clientId);
+            if (!client) {
+                showNotification('❌ Cliente no encontrado. Recarga la página.', 'error');
+                return;
+            }
+            
+            showNotification('📹 Abriendo Cloudinary para ' + client.name + '...', 'success');
+            
+            // Verificar Cloudinary
+            if (typeof cloudinary === 'undefined' || !cloudinary.createUploadWidget) {
+                showNotification('❌ Cloudinary no cargó. Comprueba tu conexión a internet.', 'error');
+                return;
+            }
+            
+            try {
+                const myWidget = cloudinary.createUploadWidget(
+                    {
+                        cloudName: CLOUDINARY_CONFIG.cloudName,
+                        uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
+                        resourceType: 'video',
+                        maxFileSize: 5368709120,
+                        multiple: true,
+                        showAdvancedOptions: false,
+                        sources: ['local', 'url', 'camera'],
+                        folder: 'visionarte/' + client.name
+                    },
+                    (error, result) => {
+                        if (error) {
+                            console.error('Cloudinary error:', error);
+                            showNotification('❌ Error Cloudinary: ' + (error.statusText || error.message || 'Verifica tu Upload Preset'), 'error');
+                            return;
+                        }
+                        if (result && result.event === 'success') {
+                            const video = {
+                                id: 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9),
+                                name: result.info.original_filename,
+                                size: result.info.bytes,
+                                uploadedDate: new Date().toISOString(),
+                                cloudinaryId: result.info.public_id,
+                                cloudinaryUrl: result.info.secure_url,
+                                isLocal: false,
+                                dateAdded: new Date().toISOString()
+                            };
+                            
+                            if (!Array.isArray(client.videos)) client.videos = [];
+                            client.videos.push(video);
+                            saveData();
+                            logMovement('🎬 ' + client.name + ': "' + video.name + '" subido a Cloudinary');
+                            showNotification('✓ Video subido correctamente', 'success');
+                            refreshAdminUI();
+                        }
+                    }
+                );
+                myWidget.open();
+            } catch(e) {
+                console.error('Error:', e);
+                showNotification('❌ Error: ' + e.message, 'error');
+            }
         }
         
         function refreshAnalytics() {
