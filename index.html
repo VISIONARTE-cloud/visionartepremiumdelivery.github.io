@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISIONARTE Premium Delivery v6.1 - Firebase Cloud</title>
+    <title>VISIONARTE Premium Delivery v6.1 FINAL - Firebase Cloud</title>
     
     <!-- PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -1494,7 +1494,7 @@
             deletedClients: [],
             movementLog: [],
             reports: {},
-            dataVersion: '5.4.1',
+            dataVersion: '6.1.0',
             lastUpdated: new Date().toISOString()
         };
         
@@ -1515,6 +1515,7 @@
         }
         
         function loadData() {
+            document.getElementById('storageUsage').textContent = 'Conectando...';
             DB_REF.once('value').then((snapshot) => {
                 const stored = snapshot.val();
                 if (stored) {
@@ -1524,11 +1525,14 @@
                     if (!Array.isArray(DATA.deletedClients)) DATA.deletedClients = [];
                     if (!Array.isArray(DATA.movementLog)) DATA.movementLog = [];
                     if (!DATA.reports) DATA.reports = {};
+                    if (!DATA.admin) DATA.admin = { password: 'admin123', socialLinks: [], welcomeMessages: [] };
+                    if (!DATA.admin.socialLinks) DATA.admin.socialLinks = [];
+                    if (!DATA.admin.welcomeMessages) DATA.admin.welcomeMessages = [];
                 }
                 FIREBASE_READY = true;
-                refreshAllUI();
                 updateStorageUsage();
-                console.log('✅ Firebase conectado');
+                refreshAllUI();
+                console.log('✅ Firebase conectado correctamente');
             }).catch((error) => {
                 console.error('❌ Firebase error:', error);
                 // Fallback localStorage
@@ -1536,18 +1540,28 @@
                 if (local) {
                     try { Object.assign(DATA, JSON.parse(local)); } catch(e) {}
                 }
+                FIREBASE_READY = false;
+                updateStorageUsage();
                 refreshAllUI();
             });
         }
         
         function saveData() {
             DATA.lastUpdated = new Date().toISOString();
+            // Debounce Firebase writes
             clearTimeout(SAVE_TIMEOUT);
             SAVE_TIMEOUT = setTimeout(() => {
-                DB_REF.set(DATA).catch((e) => console.error('Firebase save error:', e));
+                if (FIREBASE_READY) {
+                    DB_REF.set(DATA).then(() => {
+                        console.log('✅ Datos guardados en Firebase');
+                    }).catch((e) => {
+                        console.error('❌ Firebase save error:', e);
+                    });
+                }
             }, 300);
             // Backup local siempre
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); } catch(e) {}
+            updateStorageUsage();
         }
         
         function updateStorageUsage() {
@@ -1556,8 +1570,23 @@
                 el.textContent = '☁️ Firebase OK';
                 el.style.color = '#4caf50';
             } else {
-                el.textContent = 'Conectando...';
+                el.textContent = '⚠️ Sin conexión';
+                el.style.color = '#ff6b6b';
             }
+        }
+        
+        // ============ NOTIFICACIONES (FALTABA EN v5.9) ============
+        function showNotification(message, type) {
+            const notif = document.createElement('div');
+            const bgColor = type === 'error' ? '#ff6b6b' : type === 'success' ? 'linear-gradient(135deg, #4caf50, #2e7d32)' : 'linear-gradient(135deg, #ffd700, #ffab00)';
+            const txtColor = type === 'success' || type === 'error' ? '#fff' : '#000';
+            notif.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:16px 28px;background:' + bgColor + ';color:' + txtColor + ';border-radius:14px;font-weight:700;font-family:Inter,sans-serif;font-size:14px;z-index:99999;box-shadow:0 10px 40px rgba(0,0,0,0.4);animation:fadeInUp 0.3s ease-out;transition:opacity 0.3s;';
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
         }
         
         function loginAdmin() {
@@ -1863,7 +1892,10 @@
             document.querySelectorAll('.modal-tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.modal-tab-button').forEach(b => b.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            // Fix: use event from onclick context
+            if (window.event && window.event.target) {
+                window.event.target.classList.add('active');
+            }
         }
         
         function openModal(modalId) {
@@ -1929,7 +1961,7 @@
                 registeredDate: new Date().toISOString().split('T')[0],
                 status: 'active',
                 deletionDate: null,
-                dataVersion: '5.4.1',
+                dataVersion: '6.1.0',
                 lastUpdated: new Date().toISOString()
             };
             
