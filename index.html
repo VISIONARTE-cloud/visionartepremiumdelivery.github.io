@@ -1508,10 +1508,13 @@
         let currentUserType = null;
         
         window.addEventListener('DOMContentLoaded', function() {
-            loadData();
-            renderColorPicker();
-            updateStorageUsage();
-            initializeToday();
+            try {
+                renderColorPicker();
+                initializeToday();
+                loadData();
+            } catch(e) {
+                console.error('❌ Error al inicializar:', e);
+            }
         });
         
         function initializeToday() {
@@ -1727,7 +1730,14 @@
             const container = document.getElementById('carpetasContainer');
             container.innerHTML = '';
             
-            DATA.clients.forEach(client => {
+            const activeClients = DATA.clients.filter(c => c.status === 'active');
+            
+            if (activeClients.length === 0) {
+                container.innerHTML = '<p style="color: #888; text-align: center; grid-column: 1/-1;">No hay carpetas activas.</p>';
+                return;
+            }
+            
+            activeClients.forEach(client => {
                 const cc = client.color || '#daa520';
                 const carpeta = document.createElement('div');
                 carpeta.style.cssText = `
@@ -1854,10 +1864,7 @@
                     <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #daa520; border: none; color: black; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700;">✕ Cerrar</button>
                 </div>
                 <div style="border-top: 1px solid #daa520; padding-top: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4 style="color: #daa520; margin: 0;">Videos Subidos (${client.videos ? client.videos.length : 0})</h4>
-                        <button onclick="openCloudinaryUpload('${clientId}'); this.parentElement.parentElement.parentElement.parentElement.remove();" style="background: linear-gradient(135deg, #ffd700, #ffab00); border: none; color: black; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">📹 Subir Video</button>
-                    </div>
+                    <h4 style="color: #daa520; margin-bottom: 15px;">Videos Subidos (${client.videos ? client.videos.length : 0})</h4>
                     ${videosHTML}
                 </div>
             `;
@@ -2882,10 +2889,14 @@
         }
         
         function refreshAllUI() {
-            if (currentUserType === 'admin') {
-                refreshAdminUI();
-            } else if (currentUserType === 'client') {
-                refreshClientPortalUI();
+            try {
+                if (currentUserType === 'admin') {
+                    refreshAdminUI();
+                } else if (currentUserType === 'client') {
+                    refreshClientPortalUI();
+                }
+            } catch(e) {
+                console.error('❌ Error en refreshAllUI:', e);
             }
         }
     </script>
