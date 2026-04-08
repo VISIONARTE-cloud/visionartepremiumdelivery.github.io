@@ -1312,9 +1312,10 @@
             </div>
             
             <div id="datosTab" class="modal-tab-content active">
+                <input type="hidden" id="optClientOriginalName">
                 <div class="form-group">
                     <label>Nombre</label>
-                    <input type="text" id="optClientName" readonly>
+                    <input type="text" id="optClientName">
                 </div>
                 <div class="form-group">
                     <label>Email</label>
@@ -1848,6 +1849,7 @@
         function openClientOptions(clientName) {
             const client = DATA.clients.find(function(c){ return c.name===clientName; });
             if (!client) return;
+            document.getElementById('optClientOriginalName').value = client.name;
             document.getElementById('optClientName').value = client.name;
             document.getElementById('optClientEmail').value = client.email;
             document.getElementById('optFontSelect').value = client.font || 'Inter';
@@ -1869,14 +1871,31 @@
             return s ? s.style.backgroundColor : '#ffd700';
         }
         function updateClientData() {
-            const name = document.getElementById('optClientName').value;
-            const client = DATA.clients.find(function(c){ return c.name===name; });
-            if (!client) return;
+            const originalName = document.getElementById('optClientOriginalName').value;
+            const newName = document.getElementById('optClientName').value.trim();
+            const client = DATA.clients.find(function(c){ return c.name===originalName; });
+            if (!client) { showNotification('Cliente no encontrado', 'error'); return; }
+            if (!newName) { showNotification('El nombre no puede estar vacio', 'error'); return; }
+            
+            // Si cambió el nombre, verificar que no exista otro con el mismo
+            if (newName !== originalName) {
+                if (DATA.clients.some(function(c){ return c.name===newName && c.id!==client.id; })) {
+                    showNotification('Ya existe un cliente con ese nombre', 'error');
+                    return;
+                }
+                // Actualizar reports con el nuevo nombre
+                if (DATA.reports[originalName]) {
+                    DATA.reports[newName] = DATA.reports[originalName];
+                    delete DATA.reports[originalName];
+                }
+            }
+            
+            client.name = newName;
             client.email = document.getElementById('optClientEmail').value;
             client.color = getSelectedOptColor();
             client.font = document.getElementById('optFontSelect').value;
             client.lastUpdated = new Date().toISOString();
-            saveData(); logMovement('📝 Datos de "'+name+'" actualizados');
+            saveData(); logMovement('📝 Datos de "'+newName+'" actualizados');
             showNotification('Cambios guardados', 'success');
             closeModal('optionsModal'); refreshAdminUI();
         }
