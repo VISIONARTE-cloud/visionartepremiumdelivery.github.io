@@ -13,6 +13,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     
     <!-- Google Fonts - INTER BLACK + Playfair -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:wght@700&family=Poppins:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
@@ -1360,6 +1361,7 @@
         let FIREBASE_READY = false;
         let SAVE_TIMEOUT = null;
         let DB_REF = null;
+        let STORAGE = null;
         try {
             firebase.initializeApp({
                 apiKey: "AIzaSyC_MjyRnkqKsBrYmstb_cn0xiVPGnPNBRA",
@@ -1371,6 +1373,7 @@
                 appId: "1:717660782008:web:e76cb938c59b8d0f01a34d"
             });
             DB_REF = firebase.database().ref('visionarte_data');
+            STORAGE = firebase.storage();
         } catch(e) {
             console.warn('Firebase no disponible, usando localStorage');
         }
@@ -1911,21 +1914,15 @@
             if (!client) { showNotification('Cliente no encontrado', 'error'); return; }
             if (!fileInput.files || fileInput.files.length === 0) { showNotification('Selecciona un video', 'error'); return; }
             
+            if (!STORAGE) {
+                showNotification('Firebase Storage no disponible', 'error');
+                return;
+            }
+            
             const files = Array.from(fileInput.files);
             const total = files.length;
             let done = 0;
             let errors = 0;
-            
-            // Verificar tamaño
-            let totalSize = 0;
-            files.forEach(function(f) { totalSize += f.size; });
-            const totalMB = (totalSize / (1024*1024)).toFixed(0);
-            
-            if (totalSize > 100 * 1024 * 1024) {
-                if (!confirm('El archivo pesa ' + totalMB + ' MB. Cloudinary gratis limita a ~100MB por video.\n\n¿Quieres intentar subir de todos modos?\n\n(Si falla, exporta desde DaVinci como H.265/MP4 para reducir el tamaño)')) {
-                    return;
-                }
-            }
             
             document.getElementById('uploadProgress').style.display = 'block';
             document.getElementById('btnSubir').disabled = true;
@@ -1946,88 +1943,61 @@
                 
                 const file = files[index];
                 const sizeMB = (file.size / (1024*1024)).toFixed(1);
-                document.getElementById('uploadStatus').textContent = 'Subiendo ' + (index+1) + '/' + total + ': ' + file.name + ' (' + sizeMB + ' MB)';
+                const sizeGB = (file.size / (1024*1024*1024)).toFixed(2);
+                const displaySize = sizeGB >= 1 ? sizeGB + ' GB' : sizeMB + ' MB';
+                document.getElementById('uploadStatus').textContent = 'Subiendo ' + (index+1) + '/' + total + ': ' + file.name + ' (' + displaySize + ')';
                 document.getElementById('uploadBar').style.width = '0%';
                 
-                console.log('Subiendo: ' + file.name + ' (' + sizeMB + ' MB) a Cloudinary...');
+                // Path: visionarte/clientName/timestamp_filename
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const path = 'visionarte/' + client.name + '/' + Date.now() + '_' + safeName;
+                const storageRef = STORAGE.ref(path);
                 
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('upload_preset', UPLOAD_PRESET);
+                const uploadTask = storageRef.put(file);
                 
-                const url = 'https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/auto/upload';
-                
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', url, true);
-                
-                xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
+                uploadTask.on('state_changed',
+                    // Progreso
+                    function(snapshot) {
+                        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
                         document.getElementById('uploadBar').style.width = pct + '%';
                         document.getElementById('btnSubir').textContent = 'SUBIENDO... ' + pct + '%';
-                        document.getElementById('uploadStatus').textContent = 'Subiendo ' + file.name + '... ' + pct + '% (' + (e.loaded/(1024*1024)).toFixed(1) + '/' + sizeMB + ' MB)';
-                    }
-                });
-                
-                xhr.addEventListener('load', function() {
-                    console.log('Cloudinary response status:', xhr.status);
-                    console.log('Cloudinary response:', xhr.responseText.substring(0, 500));
-                    
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const data = JSON.parse(xhr.responseText);
-                            if (data.error) {
-                                console.error('Cloudinary error:', data.error);
-                                showNotification('Cloudinary: ' + data.error.message, 'error');
-                                errors++;
-                            } else {
-                                if (!Array.isArray(client.videos)) client.videos = [];
-                                client.videos.push({
-                                    id: 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9),
-                                    name: data.original_filename || file.name.replace(/\.[^.]+$/, ''),
-                                    size: data.bytes || file.size,
-                                    uploadedDate: new Date().toISOString(),
-                                    cloudinaryId: data.public_id,
-                                    cloudinaryUrl: data.secure_url,
-                                    isLocal: false,
-                                    dateAdded: new Date().toISOString()
-                                });
-                                saveData();
-                                logMovement('🎬 ' + client.name + ': ' + (data.original_filename||file.name) + ' subido');
-                                showNotification('✓ ' + (data.original_filename||file.name) + ' subido', 'success');
-                                done++;
-                            }
-                        } catch(e) {
-                            console.error('Parse error:', e, xhr.responseText.substring(0, 200));
-                            showNotification('Error al procesar respuesta', 'error');
-                            errors++;
-                        }
-                    } else {
-                        let errMsg = 'Error HTTP ' + xhr.status;
-                        try { errMsg = JSON.parse(xhr.responseText).error.message; } catch(e) {}
-                        console.error('HTTP error:', xhr.status, xhr.responseText.substring(0, 300));
-                        showNotification('Error: ' + errMsg, 'error');
+                        const transferred = (snapshot.bytesTransferred/(1024*1024)).toFixed(1);
+                        document.getElementById('uploadStatus').textContent = file.name + ' — ' + pct + '% (' + transferred + '/' + sizeMB + ' MB)';
+                    },
+                    // Error
+                    function(error) {
+                        console.error('Firebase Storage error:', error.code, error.message);
+                        let msg = 'Error al subir ' + file.name;
+                        if (error.code === 'storage/unauthorized') msg = 'Sin permiso. Revisa las reglas de Storage.';
+                        else if (error.code === 'storage/canceled') msg = 'Subida cancelada';
+                        else if (error.code === 'storage/quota-exceeded') msg = 'Almacenamiento lleno (5GB max gratis)';
+                        else msg = error.message || msg;
+                        showNotification(msg, 'error');
                         errors++;
+                        doUpload(index + 1);
+                    },
+                    // Completado
+                    function() {
+                        uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
+                            if (!Array.isArray(client.videos)) client.videos = [];
+                            client.videos.push({
+                                id: 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9),
+                                name: file.name.replace(/\.[^.]+$/, ''),
+                                size: file.size,
+                                uploadedDate: new Date().toISOString(),
+                                cloudinaryUrl: downloadURL, // mismo campo para compatibilidad con descarga
+                                storagePath: path,
+                                isLocal: false,
+                                dateAdded: new Date().toISOString()
+                            });
+                            saveData();
+                            logMovement('🎬 ' + client.name + ': ' + file.name + ' subido (' + displaySize + ')');
+                            showNotification('✓ ' + file.name + ' subido', 'success');
+                            done++;
+                            doUpload(index + 1);
+                        });
                     }
-                    doUpload(index + 1);
-                });
-                
-                xhr.addEventListener('error', function() {
-                    console.error('XHR network error for: ' + file.name);
-                    showNotification('Error de red subiendo ' + file.name + '. ¿Archivo demasiado grande?', 'error');
-                    errors++;
-                    doUpload(index + 1);
-                });
-                
-                xhr.addEventListener('timeout', function() {
-                    console.error('XHR timeout for: ' + file.name);
-                    showNotification('Timeout subiendo ' + file.name + '. Intenta un archivo mas pequeno.', 'error');
-                    errors++;
-                    doUpload(index + 1);
-                });
-                
-                xhr.timeout = 600000; // 10 minutos
-                xhr.send(formData);
+                );
             }
             
             doUpload(0);
