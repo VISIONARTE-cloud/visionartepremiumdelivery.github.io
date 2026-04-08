@@ -2194,7 +2194,6 @@
                 return;
             }
             
-            // Subir cada archivo directamente a Cloudinary via fetch
             var files = Array.from(fileInput.files);
             var total = files.length;
             var uploaded = 0;
@@ -2203,74 +2202,79 @@
             document.getElementById('btnSubir').disabled = true;
             document.getElementById('btnSubir').textContent = 'SUBIENDO...';
             
-            files.forEach(function(file, index) {
-                document.getElementById('uploadStatus').textContent = 'Subiendo ' + (index+1) + ' de ' + total + ': ' + file.name;
+            function uploadFile(file) {
+                document.getElementById('uploadStatus').textContent = 'Subiendo ' + (uploaded+1) + ' de ' + total + ': ' + file.name;
+                document.getElementById('uploadBar').style.width = '10%';
                 
                 var formData = new FormData();
                 formData.append('file', file);
-                formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
-                formData.append('folder', 'visionarte/' + client.name);
+                formData.append('upload_preset', 'visionarte_videos');
+                formData.append('resource_type', 'video');
                 
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', 'https://api.cloudinary.com/v1_1/' + CLOUDINARY_CONFIG.cloudName + '/video/upload', true);
+                var url = 'https://api.cloudinary.com/v1_1/daigts65r/auto/upload';
                 
-                // Progreso
-                xhr.upload.onprogress = function(e) {
-                    if (e.lengthComputable) {
-                        var pct = Math.round((e.loaded / e.total) * 100);
-                        document.getElementById('uploadBar').style.width = pct + '%';
-                        document.getElementById('uploadStatus').textContent = 'Subiendo ' + file.name + '... ' + pct + '%';
+                fetch(url, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    document.getElementById('uploadBar').style.width = '80%';
+                    if (!response.ok) {
+                        return response.text().then(function(txt) {
+                            throw new Error('Cloudinary ' + response.status + ': ' + txt);
+                        });
                     }
-                };
-                
-                xhr.onload = function() {
-                    if (xhr.status === 200) {
-                        var res = JSON.parse(xhr.responseText);
-                        var video = {
-                            id: 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9),
-                            name: res.original_filename || file.name,
-                            size: res.bytes || file.size,
-                            uploadedDate: new Date().toISOString(),
-                            cloudinaryId: res.public_id,
-                            cloudinaryUrl: res.secure_url,
-                            isLocal: false,
-                            dateAdded: new Date().toISOString()
-                        };
-                        if (!Array.isArray(client.videos)) client.videos = [];
-                        client.videos.push(video);
-                        saveData();
-                        logMovement('🎬 ' + client.name + ': ' + video.name + ' subido a Cloudinary');
-                        showNotification('✓ ' + video.name + ' subido', 'success');
-                    } else {
-                        var errMsg = 'Error al subir ' + file.name;
-                        try { errMsg += ': ' + JSON.parse(xhr.responseText).error.message; } catch(e){}
-                        showNotification(errMsg, 'error');
-                    }
+                    return response.json();
+                })
+                .then(function(res) {
+                    document.getElementById('uploadBar').style.width = '100%';
+                    
+                    var video = {
+                        id: 'vid_' + Date.now() + Math.random().toString(36).substr(2, 9),
+                        name: res.original_filename || file.name.replace(/\.[^.]+$/, ''),
+                        size: res.bytes || file.size,
+                        uploadedDate: new Date().toISOString(),
+                        cloudinaryId: res.public_id,
+                        cloudinaryUrl: res.secure_url,
+                        isLocal: false,
+                        dateAdded: new Date().toISOString()
+                    };
+                    if (!Array.isArray(client.videos)) client.videos = [];
+                    client.videos.push(video);
+                    saveData();
+                    logMovement('🎬 ' + client.name + ': ' + video.name + ' subido');
+                    showNotification('✓ ' + video.name + ' subido correctamente', 'success');
                     
                     uploaded++;
-                    if (uploaded === total) {
-                        document.getElementById('uploadProgress').style.display = 'none';
-                        document.getElementById('uploadBar').style.width = '0%';
-                        document.getElementById('btnSubir').disabled = false;
-                        document.getElementById('btnSubir').textContent = '📹 Subir Videos';
-                        fileInput.value = '';
-                        refreshAdminUI();
-                        if (uploaded === total) showNotification('Todos los videos subidos (' + total + ')', 'success');
+                    if (uploaded < total) {
+                        uploadFile(files[uploaded]);
+                    } else {
+                        finishUpload();
                     }
-                };
-                
-                xhr.onerror = function() {
-                    showNotification('Error de conexion al subir ' + file.name, 'error');
+                })
+                .catch(function(err) {
+                    console.error('Upload error:', err);
+                    showNotification('Error al subir ' + file.name + ': ' + err.message, 'error');
                     uploaded++;
-                    if (uploaded === total) {
-                        document.getElementById('uploadProgress').style.display = 'none';
-                        document.getElementById('btnSubir').disabled = false;
-                        document.getElementById('btnSubir').textContent = '📹 Subir Videos';
+                    if (uploaded < total) {
+                        uploadFile(files[uploaded]);
+                    } else {
+                        finishUpload();
                     }
-                };
-                
-                xhr.send(formData);
-            });
+                });
+            }
+            
+            function finishUpload() {
+                document.getElementById('uploadProgress').style.display = 'none';
+                document.getElementById('uploadBar').style.width = '0%';
+                document.getElementById('btnSubir').disabled = false;
+                document.getElementById('btnSubir').textContent = '📹 Subir Videos';
+                fileInput.value = '';
+                refreshAdminUI();
+                showNotification('Subida completada: ' + uploaded + ' video(s)', 'success');
+            }
+            
+            uploadFile(files[0]);
         }
         
         function refreshAnalytics() {
