@@ -1481,18 +1481,25 @@
         }
         
         // ============ FIREBASE LOAD/SAVE ============
+        // Firebase convierte arrays [] en objetos {0:{},1:{}}. Esta funcion los restaura.
+        function toArray(val) {
+            if (Array.isArray(val)) return val;
+            if (val && typeof val === 'object') return Object.values(val);
+            return [];
+        }
+        
         function sanitizeData() {
-            if (!Array.isArray(DATA.clients)) DATA.clients = [];
-            if (!Array.isArray(DATA.archivedClients)) DATA.archivedClients = [];
-            if (!Array.isArray(DATA.deletedClients)) DATA.deletedClients = [];
-            if (!Array.isArray(DATA.movementLog)) DATA.movementLog = [];
+            DATA.clients = toArray(DATA.clients);
+            DATA.archivedClients = toArray(DATA.archivedClients);
+            DATA.deletedClients = toArray(DATA.deletedClients);
+            DATA.movementLog = toArray(DATA.movementLog);
             if (!DATA.reports) DATA.reports = {};
             if (!DATA.admin) DATA.admin = {password:'admin123',socialLinks:[],welcomeMessages:[]};
-            if (!Array.isArray(DATA.admin.socialLinks)) DATA.admin.socialLinks = [];
-            if (!Array.isArray(DATA.admin.welcomeMessages)) DATA.admin.welcomeMessages = [];
+            DATA.admin.socialLinks = toArray(DATA.admin.socialLinks);
+            DATA.admin.welcomeMessages = toArray(DATA.admin.welcomeMessages);
             DATA.clients.forEach(function(c) {
-                if (!Array.isArray(c.videos)) c.videos = [];
-                if (!Array.isArray(c.downloads)) c.downloads = [];
+                c.videos = toArray(c.videos);
+                c.downloads = toArray(c.downloads);
                 if (!c.color) c.color = '#ffd700';
                 if (!c.font) c.font = 'Inter';
                 if (!c.status) c.status = 'active';
