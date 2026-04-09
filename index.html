@@ -1677,23 +1677,40 @@
             const video = (client.videos||[]).find(function(v){ return v.id===videoId; });
             if (!video) { showNotification('Video no encontrado', 'error'); return; }
             if (video.cloudinaryUrl) {
-                const a = document.createElement('a');
-                a.href = video.cloudinaryUrl;
-                a.download = videoName.replace(/[^a-zA-Z0-9._-]/g, '_');
-                a.target = '_blank';
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                showNotification('Descargando ' + videoName, 'success');
+                showNotification('Preparando descarga de ' + videoName + '...', 'success');
+                forceDownload(video.cloudinaryUrl, videoName);
             } else {
                 getVideoFromIDB(videoId).then(function(blob) {
-                    if (!blob) { showNotification('Archivo no encontrado', 'error'); return; }
+                    if (!blob) { showNotification('Archivo no encontrado localmente', 'error'); return; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url; a.download = videoName.replace(/[^a-zA-Z0-9._-]/g, '_');
                     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    setTimeout(function(){ URL.revokeObjectURL(url); }, 100);
+                    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
                     showNotification('Descargando ' + videoName, 'success');
                 });
             }
+        }
+        
+        // Descarga que funciona sin CORS
+        function forceDownload(url, fileName) {
+            if (!url) { showNotification('URL del video no disponible', 'error'); return; }
+            
+            // Abrir URL directamente - Firebase Storage con Content-Disposition fuerza descarga
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = fileName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'video.mp4';
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(function() {
+                document.body.removeChild(a);
+            }, 500);
+            
+            showNotification('Descargando ' + fileName, 'success');
         }
         
         function archiveVideo(clientId, videoId, videoName, element) {
@@ -1979,7 +1996,11 @@
                 const path = 'visionarte/' + client.name + '/' + Date.now() + '_' + safeName;
                 const storageRef = STORAGE.ref(path);
                 
-                const uploadTask = storageRef.put(file);
+                const metadata = {
+                    contentType: file.type || 'video/mp4',
+                    contentDisposition: 'attachment; filename="' + safeName + '"'
+                };
+                const uploadTask = storageRef.put(file, metadata);
                 
                 uploadTask.on('state_changed',
                     // Progreso
@@ -2276,35 +2297,44 @@
             vids.forEach(function(video) {
                 const card = document.createElement('div'); card.className='video-card';
                 const mb = (video.size/(1024*1024)).toFixed(1);
-                card.innerHTML = '<div class="video-name">🎬 '+video.name+'</div><div class="video-info"><div>📦 '+mb+' MB</div><div>📅 '+new Date(video.uploadedDate).toLocaleDateString('es-ES')+'</div></div><div class="video-actions"><button class="btn-video" onclick="downloadVideo(\''+video.id+'\',\''+video.name.replace(/'/g,"\\'")+'\')">⬇️ Descargar</button></div>';
+                
+                var nameDiv = document.createElement('div'); nameDiv.className='video-name'; nameDiv.textContent = '🎬 ' + video.name;
+                var infoDiv = document.createElement('div'); infoDiv.className='video-info';
+                infoDiv.innerHTML = '<div>📦 '+mb+' MB</div><div>📅 '+new Date(video.uploadedDate).toLocaleDateString('es-ES')+'</div>';
+                var actionsDiv = document.createElement('div'); actionsDiv.className='video-actions';
+                var btn = document.createElement('button'); btn.className='btn-video'; btn.textContent='⬇️ Descargar';
+                btn.addEventListener('click', (function(vid, vname) {
+                    return function() { downloadVideo(vid, vname); };
+                })(video.id, video.name));
+                actionsDiv.appendChild(btn);
+                card.appendChild(nameDiv); card.appendChild(infoDiv); card.appendChild(actionsDiv);
                 container.appendChild(card);
             });
         }
         
         function downloadVideo(videoId, videoName) {
             const client = DATA.clients.find(function(c){return c.name===currentUser;});
-            if (!client) return;
+            if (!client) { showNotification('Error: sesion no valida', 'error'); return; }
             const video = (client.videos||[]).find(function(v){return v.id===videoId;});
-            if (!video) { showNotification('Video no encontrado','error'); return; }
+            if (!video) { showNotification('Video no encontrado. Recarga la pagina.','error'); return; }
+            
+            // Registrar descarga
+            if (!Array.isArray(client.downloads)) client.downloads=[];
+            client.downloads.push({videoId:videoId,timestamp:new Date().toISOString()});
+            saveData();
+            logMovement('⬇️ '+currentUser+' descargo: '+videoName);
+            
             if (video.cloudinaryUrl) {
-                const a = document.createElement('a');
-                a.href = video.cloudinaryUrl; a.download = videoName.replace(/[^a-zA-Z0-9._-]/g,'_'); a.target='_blank';
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                if (!Array.isArray(client.downloads)) client.downloads=[];
-                client.downloads.push({videoId:videoId,timestamp:new Date().toISOString()});
-                saveData(); logMovement('⬇️ '+currentUser+' descargo: '+videoName);
-                showNotification(videoName+' descargado','success');
+                showNotification('Preparando descarga de ' + videoName + '...', 'success');
+                forceDownload(video.cloudinaryUrl, videoName);
                 return;
             }
             getVideoFromIDB(videoId).then(function(blob) {
-                if (!blob) { showNotification('Error al descargar','error'); return; }
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href=url; a.download=videoName.replace(/[^a-zA-Z0-9._-]/g,'_');
+                if (!blob) { showNotification('Archivo no disponible','error'); return; }
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a'); a.href=url; a.download=videoName.replace(/[^a-zA-Z0-9._-]/g,'_');
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                setTimeout(function(){URL.revokeObjectURL(url);},100);
-                if (!Array.isArray(client.downloads)) client.downloads=[];
-                client.downloads.push({videoId:videoId,timestamp:new Date().toISOString()});
-                saveData(); logMovement('⬇️ '+currentUser+' descargo: '+videoName);
+                setTimeout(function(){URL.revokeObjectURL(url);},1000);
                 showNotification(videoName+' descargado','success');
             });
         }
