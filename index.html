@@ -1692,25 +1692,41 @@
             }
         }
         
-        // Descarga que funciona sin CORS
+        // Descarga forzada - funciona con Firebase Storage
         function forceDownload(url, fileName) {
             if (!url) { showNotification('URL del video no disponible', 'error'); return; }
             
-            // Abrir URL directamente - Firebase Storage con Content-Disposition fuerza descarga
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = fileName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'video.mp4';
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
+            var safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'video';
+            if (!safeName.match(/\.\w+$/)) safeName += '.mp4';
             
-            setTimeout(function() {
-                document.body.removeChild(a);
-            }, 500);
+            showNotification('Preparando descarga...', 'success');
             
-            showNotification('Descargando ' + fileName, 'success');
+            // Intentar fetch + blob (funciona con Firebase Storage CORS)
+            fetch(url, { mode: 'cors' })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.blob();
+                })
+                .then(function(blob) {
+                    var blobUrl = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = safeName;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(function() {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(blobUrl);
+                    }, 2000);
+                    showNotification('✓ ' + fileName + ' descargado', 'success');
+                })
+                .catch(function(err) {
+                    console.error('Fetch download error:', err);
+                    // Fallback: abrir en nueva pestaña para que guarden manualmente
+                    window.open(url, '_blank');
+                    showNotification('Video abierto en nueva pestaña. Usa boton derecho → Guardar', 'success');
+                });
         }
         
         function archiveVideo(clientId, videoId, videoName, element) {
@@ -1732,6 +1748,20 @@
             if (!client) return;
             const idx = (client.videos||[]).findIndex(function(v){ return v.id===videoId; });
             if (idx === -1) return;
+            
+            // Eliminar archivo de Firebase Storage si tiene storagePath
+            const video = client.videos[idx];
+            if (video.storagePath && STORAGE) {
+                try {
+                    STORAGE.ref(video.storagePath).delete().then(function() {
+                        console.log('Archivo eliminado de Storage: ' + video.storagePath);
+                    }).catch(function(e) {
+                        console.warn('No se pudo eliminar de Storage:', e.message);
+                    });
+                } catch(e) {}
+            }
+            
+            // Eliminar de IndexedDB (fallback local)
             deleteVideoFromIDB(videoId).then(function() {
                 client.videos.splice(idx, 1);
                 saveData();
