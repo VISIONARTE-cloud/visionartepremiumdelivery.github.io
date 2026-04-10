@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISIONARTE Premium Delivery v9.0 - FINAL</title>
+    <title>VISIONARTE Premium Delivery v9.3 - FINAL</title>
     
     <!-- PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -1306,9 +1306,9 @@
             <div class="modal-header">⚙️ Opciones</div>
             
             <div class="modal-tabs">
-                <button class="modal-tab-button active" onclick="switchModalTab('datosTab')">📝 Datos</button>
-                <button class="modal-tab-button" onclick="switchModalTab('passClientTab')">🔐 Contraseña</button>
-                <button class="modal-tab-button" onclick="switchModalTab('redesClientTab')">📱 Redes</button>
+                <button class="modal-tab-button active" onclick="switchModalTab('datosTab',this)">📝 Datos</button>
+                <button class="modal-tab-button" onclick="switchModalTab('passClientTab',this)">🔐 Contraseña</button>
+                <button class="modal-tab-button" onclick="switchModalTab('redesClientTab',this)">📱 Redes</button>
             </div>
             
             <div id="datosTab" class="modal-tab-content active">
@@ -1615,11 +1615,11 @@
             document.querySelectorAll('.tab-button')[index].classList.add('active');
             if (tabName === 'carpetasTab') loadCarpetas();
         }
-        function switchModalTab(tabName) {
+        function switchModalTab(tabName, btn) {
             document.querySelectorAll('.modal-tab-content').forEach(function(t){ t.classList.remove('active'); });
             document.querySelectorAll('.modal-tab-button').forEach(function(b){ b.classList.remove('active'); });
             document.getElementById(tabName).classList.add('active');
-            if (window.event && window.event.target) window.event.target.classList.add('active');
+            if (btn) btn.classList.add('active');
         }
         
         // ============ CARPETAS (ADMIN) ============
@@ -1677,8 +1677,7 @@
             const video = (client.videos||[]).find(function(v){ return v.id===videoId; });
             if (!video) { showNotification('Video no encontrado', 'error'); return; }
             if (video.cloudinaryUrl) {
-                showNotification('Preparando descarga de ' + videoName + '...', 'success');
-                forceDownload(video.cloudinaryUrl, videoName);
+                forceDownload(video.cloudinaryUrl, videoName, video.size || 0);
             } else {
                 getVideoFromIDB(videoId).then(function(blob) {
                     if (!blob) { showNotification('Archivo no encontrado localmente', 'error'); return; }
@@ -1692,40 +1691,81 @@
             }
         }
         
-        // Descarga forzada - funciona con Firebase Storage
-        function forceDownload(url, fileName) {
+        // ============ DESCARGA CON PROGRESO (v9.3 - streaming, sin crash de memoria) ============
+        function forceDownload(url, fileName, fileSize) {
             if (!url) { showNotification('URL del video no disponible', 'error'); return; }
-            
-            var safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'video';
-            if (!safeName.match(/\.\w+$/)) safeName += '.mp4';
-            
-            showNotification('Preparando descarga...', 'success');
-            
-            // Intentar fetch + blob (funciona con Firebase Storage CORS)
+
+            var safeName = (fileName || 'video').replace(/[^a-zA-Z0-9._\- ]/g, '_');
+            if (!safeName.match(/\.[a-zA-Z0-9]+$/)) safeName += '.mp4';
+
+            // Crear overlay de progreso
+            var existingOverlay = document.getElementById('dlProgressOverlay');
+            if (existingOverlay) existingOverlay.remove();
+
+            var overlay = document.createElement('div');
+            overlay.id = 'dlProgressOverlay';
+            overlay.style.cssText = 'position:fixed;bottom:30px;right:30px;background:rgba(0,0,0,0.95);border:1px solid #ffd700;border-radius:16px;padding:22px 24px;z-index:99999;color:white;min-width:300px;max-width:380px;box-shadow:0 10px 40px rgba(255,215,0,0.2);font-family:Inter,sans-serif;';
+            overlay.innerHTML = '<div style="font-weight:800;color:#ffd700;margin-bottom:6px;font-size:14px;">⬇️ Descargando video</div><div id="dlFileName" style="font-size:12px;color:#bbb;margin-bottom:12px;word-break:break-all;">'+fileName+'</div><div style="background:#222;border-radius:6px;height:8px;overflow:hidden;"><div id="dlBar" style="background:linear-gradient(90deg,#ffd700,#ffed4e);height:100%;width:0%;transition:width 0.2s;border-radius:6px;"></div></div><div id="dlPct" style="font-size:12px;color:#888;margin-top:8px;text-align:center;">Iniciando...</div><button id="dlCancelBtn" onclick="document.getElementById(\'dlProgressOverlay\').remove()" style="margin-top:12px;background:transparent;border:1px solid #444;color:#666;padding:5px 14px;border-radius:8px;cursor:pointer;font-size:11px;width:100%;font-family:Inter,sans-serif;">✕ Cancelar / Cerrar</button>';
+            document.body.appendChild(overlay);
+
+            var cancelled = false;
+            document.getElementById('dlCancelBtn').onclick = function() { cancelled = true; overlay.remove(); };
+
+            // Streaming fetch con progreso real
             fetch(url, { mode: 'cors' })
                 .then(function(response) {
                     if (!response.ok) throw new Error('HTTP ' + response.status);
-                    return response.blob();
-                })
-                .then(function(blob) {
-                    var blobUrl = URL.createObjectURL(blob);
-                    var a = document.createElement('a');
-                    a.href = blobUrl;
-                    a.download = safeName;
-                    a.style.display = 'none';
-                    document.body.appendChild(a);
-                    a.click();
-                    setTimeout(function() {
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(blobUrl);
-                    }, 2000);
-                    showNotification('✓ ' + fileName + ' descargado', 'success');
+                    var contentLength = response.headers.get('Content-Length');
+                    var total = contentLength ? parseInt(contentLength, 10) : (fileSize || 0);
+                    var loaded = 0;
+                    var chunks = [];
+                    var reader = response.body.getReader();
+
+                    function pump() {
+                        if (cancelled) return Promise.resolve();
+                        return reader.read().then(function(result) {
+                            if (cancelled) return;
+                            if (result.done) {
+                                // Ensamblar blob y disparar descarga
+                                var blob = new Blob(chunks);
+                                var blobUrl = URL.createObjectURL(blob);
+                                var a = document.createElement('a');
+                                a.href = blobUrl; a.download = safeName; a.style.display = 'none';
+                                document.body.appendChild(a); a.click();
+                                setTimeout(function() {
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(blobUrl);
+                                    if (document.getElementById('dlProgressOverlay')) overlay.remove();
+                                    showNotification('✅ ' + fileName + ' descargado', 'success');
+                                }, 1500);
+                                return;
+                            }
+                            chunks.push(result.value);
+                            loaded += result.value.length;
+                            var pct = total > 0 ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
+                            var dlBar = document.getElementById('dlBar');
+                            var dlPct = document.getElementById('dlPct');
+                            if (dlBar) dlBar.style.width = pct + '%';
+                            if (dlPct) {
+                                var mb = (loaded / 1048576).toFixed(1);
+                                var totalMb = total > 0 ? ' / ' + (total / 1048576).toFixed(0) + ' MB' : '';
+                                dlPct.textContent = pct + '%  —  ' + mb + ' MB' + totalMb;
+                            }
+                            return pump();
+                        });
+                    }
+                    return pump();
                 })
                 .catch(function(err) {
-                    console.error('Fetch download error:', err);
-                    // Fallback: abrir en nueva pestaña para que guarden manualmente
-                    window.open(url, '_blank');
-                    showNotification('Video abierto en nueva pestaña. Usa boton derecho → Guardar', 'success');
+                    console.error('Streaming download error:', err);
+                    if (document.getElementById('dlProgressOverlay')) overlay.remove();
+                    // Fallback fiable: link directo (Firebase Storage envía Content-Disposition: attachment)
+                    var a = document.createElement('a');
+                    a.href = url; a.download = safeName; a.target = '_blank'; a.rel = 'noopener';
+                    a.style.display = 'none';
+                    document.body.appendChild(a); a.click();
+                    setTimeout(function() { if (document.body.contains(a)) document.body.removeChild(a); }, 500);
+                    showNotification('⬇️ Descarga iniciada en tu navegador', 'success');
                 });
         }
         
@@ -1781,15 +1821,54 @@
                 if (!client) return;
                 const video = (client.videos||[]).find(function(v){ return v.id===videoId; });
                 if (!video) return;
-                saveVideoToIDB(videoId, file).then(function() {
-                    video.name = file.name; video.size = file.size;
-                    video.uploadedDate = new Date().toISOString();
-                    saveData();
-                    logMovement('🔄 '+client.name+': "'+videoName+'" reemplazado');
-                    showNotification('Video reemplazado', 'success');
-                    document.querySelector('[style*="z-index: 10000"]').remove();
-                    viewClientFolder(clientId, client.name);
-                });
+
+                if (!STORAGE) {
+                    showNotification('Firebase Storage no disponible para reemplazar', 'error');
+                    return;
+                }
+
+                showNotification('Subiendo reemplazo...', 'success');
+
+                // Eliminar archivo viejo de Storage si existe
+                if (video.storagePath) {
+                    try { STORAGE.ref(video.storagePath).delete().catch(function(){}); } catch(e) {}
+                }
+
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const path = 'visionarte/' + client.name + '/' + Date.now() + '_' + safeName;
+                const storageRef = STORAGE.ref(path);
+                const metadata = {
+                    contentType: file.type || 'video/mp4',
+                    contentDisposition: 'attachment; filename="' + safeName + '"'
+                };
+                const uploadTask = storageRef.put(file, metadata);
+
+                uploadTask.on('state_changed',
+                    function(snapshot) {
+                        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                        showNotification('Reemplazando... ' + pct + '%', 'success');
+                    },
+                    function(error) {
+                        showNotification('Error al reemplazar: ' + error.message, 'error');
+                    },
+                    function() {
+                        uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
+                            video.name = file.name.replace(/\.[^.]+$/, '');
+                            video.size = file.size;
+                            video.cloudinaryUrl = downloadURL;
+                            video.storagePath = path;
+                            video.uploadedDate = new Date().toISOString();
+                            video.isLocal = false;
+                            saveData();
+                            logMovement('🔄 '+client.name+': "'+videoName+'" reemplazado (Firebase Storage)');
+                            showNotification('✅ Video reemplazado', 'success');
+                            // Cerrar modal y reabrir
+                            var modal = document.querySelector('[style*="z-index:10000"]') || document.querySelector('[style*="z-index: 10000"]');
+                            if (modal) modal.remove();
+                            viewClientFolder(clientId, client.name);
+                        });
+                    }
+                );
             };
             input.click();
         }
@@ -2212,19 +2291,23 @@
         }
         
         function updateAllReports() {
+            var changed = false;
             DATA.clients.forEach(function(client) {
-                if (!DATA.reports[client.name]) DATA.reports[client.name] = {};
+                if (!DATA.reports[client.name]) { DATA.reports[client.name] = {}; changed = true; }
                 (client.videos||[]).forEach(function(video) {
-                    const d = new Date(video.uploadedDate);
+                    if (!video.uploadedDate) return;
+                    var d;
+                    try { d = new Date(video.uploadedDate); if (isNaN(d.getTime())) return; } catch(e) { return; }
                     const mk = d.toISOString().substring(0,7);
-                    if (!DATA.reports[client.name][mk]) DATA.reports[client.name][mk] = [];
+                    if (!DATA.reports[client.name][mk]) { DATA.reports[client.name][mk] = []; changed = true; }
                     if (!(DATA.reports[client.name][mk].find(function(v){ return v.id===video.id; }))) {
                         const ent = new Date(d.getTime() + 3*86400000);
                         DATA.reports[client.name][mk].push(Object.assign({}, video, { fechaEntrega: ent.toISOString().split('T')[0] }));
+                        changed = true;
                     }
                 });
             });
-            saveData();
+            if (changed) saveData();
         }
         
         function loadClientReport() {
@@ -2259,7 +2342,7 @@
             const avg = (videos.reduce(function(s,v){return s+Math.floor((new Date(v.fechaEntrega)-new Date(v.uploadedDate))/86400000);},0)/videos.length).toFixed(1);
             const mn = new Date(month+'-01').toLocaleDateString('es-ES',{month:'long',year:'numeric'});
             let h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe - '+cn+'</title><style>body{font-family:Arial;color:#333;background:#f5f5f5;padding:20px}.c{max-width:900px;margin:0 auto;background:#fff;padding:40px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.hd{background:linear-gradient(135deg,#000,#1a1a1a);color:#ffd700;padding:30px;border-radius:8px;margin-bottom:30px;text-align:center}.hd h1{font-size:32px;margin:0;font-weight:900}.hd p{font-size:14px;color:#fff;margin:5px 0 0 0}table{width:100%;border-collapse:collapse;font-size:13px;margin:20px 0}th{background:#000;color:#ffd700;padding:15px;text-align:left}td{padding:12px 15px;border-bottom:1px solid #e0e0e0}.ft{text-align:center;color:#999;font-size:11px;margin-top:40px}</style></head><body><div class="c"><div class="hd"><h1>VISIONARTE</h1><p>Informe Mensual</p></div><p><strong>Cliente:</strong> '+cn+' | <strong>Periodo:</strong> '+mn+' | <strong>Fecha:</strong> '+new Date().toLocaleDateString('es-ES')+'</p><table><thead><tr><th>#</th><th>Video</th><th>Grabacion</th><th>Entrega</th><th>Dias</th><th>GB</th></tr></thead><tbody>';
-            videos.forEach(function(v,i){ h+='<tr><td>'+(i+1)+'</td><td>'+v.name+'</td><td>'+new Date(v.uploadedDate).toLocaleDateString('es-ES')+'</td><td>'+v.fechaEntrega+'</td><td>'+Math.floor((new Date(v.fechaEntrega)-new Date(v.uploadedDate))/86400000)+'</td><td>'+(v.size/(1024*1024*1024)).toFixed(2)+'</td></tr>'; });
+            videos.forEach(function(v,i){ h+='<tr><td>'+(i+1)+'</td><td>'+v.name+'</td><td>'+new Date(v.uploadedDate).toLocaleDateString('es-ES')+'</td><td>'+v.fechaEntrega+'</td><td>'+Math.floor((new Date(v.fechaEntrega)-new Date(v.uploadedDate))/86400000)+'</td><td>'+(v.size ? (v.size/(1024*1024*1024)).toFixed(2) : '—')+'</td></tr>'; });
             h += '</tbody></table><p style="text-align:center;font-weight:bold;background:#fff3cd;padding:15px;border:2px solid #ffd700;border-radius:8px;">Total: '+totalGB+' GB | Promedio: '+avg+' dias</p><div class="ft"><p>VISIONARTE - Ibiza, España | '+new Date().toLocaleString('es-ES')+'</p></div></div></body></html>';
             const blob = new Blob([h], {type:'text/html'});
             const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='VISIONARTE_Informe_'+cn+'_'+month+'.html';
@@ -2322,15 +2405,16 @@
         function refreshClientVideos(client) {
             const container = document.getElementById('videosContainer');
             container.innerHTML = '';
-            const vids = client.videos || [];
+            const vids = (client.videos || []).filter(function(v){ return v.status !== 'archived'; });
             if (vids.length===0) { container.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#888;">Proximamente tendras tus videos aqui.</p>'; return; }
             vids.forEach(function(video) {
                 const card = document.createElement('div'); card.className='video-card';
-                const mb = (video.size/(1024*1024)).toFixed(1);
+                const mb = video.size ? (video.size/(1024*1024)).toFixed(1) : '?';
                 
                 var nameDiv = document.createElement('div'); nameDiv.className='video-name'; nameDiv.textContent = '🎬 ' + video.name;
                 var infoDiv = document.createElement('div'); infoDiv.className='video-info';
-                infoDiv.innerHTML = '<div>📦 '+mb+' MB</div><div>📅 '+new Date(video.uploadedDate).toLocaleDateString('es-ES')+'</div>';
+                var dateStr = video.uploadedDate ? new Date(video.uploadedDate).toLocaleDateString('es-ES') : 'Sin fecha';
+                infoDiv.innerHTML = '<div>📦 '+mb+' MB</div><div>📅 '+dateStr+'</div>';
                 var actionsDiv = document.createElement('div'); actionsDiv.className='video-actions';
                 var btn = document.createElement('button'); btn.className='btn-video'; btn.textContent='⬇️ Descargar';
                 btn.addEventListener('click', (function(vid, vname) {
@@ -2348,19 +2432,22 @@
             const video = (client.videos||[]).find(function(v){return v.id===videoId;});
             if (!video) { showNotification('Video no encontrado. Recarga la pagina.','error'); return; }
             
-            // Registrar descarga
-            if (!Array.isArray(client.downloads)) client.downloads=[];
-            client.downloads.push({videoId:videoId,timestamp:new Date().toISOString()});
-            saveData();
-            logMovement('⬇️ '+currentUser+' descargo: '+videoName);
-            
             if (video.cloudinaryUrl) {
-                showNotification('Preparando descarga de ' + videoName + '...', 'success');
-                forceDownload(video.cloudinaryUrl, videoName);
+                // Registrar descarga solo cuando hay URL válida
+                if (!Array.isArray(client.downloads)) client.downloads=[];
+                client.downloads.push({videoId:videoId,timestamp:new Date().toISOString()});
+                saveData();
+                logMovement('⬇️ '+currentUser+' descargo: '+videoName);
+                forceDownload(video.cloudinaryUrl, videoName, video.size || 0);
                 return;
             }
             getVideoFromIDB(videoId).then(function(blob) {
                 if (!blob) { showNotification('Archivo no disponible','error'); return; }
+                // Registrar descarga solo si el blob existe
+                if (!Array.isArray(client.downloads)) client.downloads=[];
+                client.downloads.push({videoId:videoId,timestamp:new Date().toISOString()});
+                saveData();
+                logMovement('⬇️ '+currentUser+' descargo: '+videoName);
                 var url = URL.createObjectURL(blob);
                 var a = document.createElement('a'); a.href=url; a.download=videoName.replace(/[^a-zA-Z0-9._-]/g,'_');
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -2374,9 +2461,17 @@
             const vids = (DATA.reports[client.name]&&DATA.reports[client.name][mk]) ? DATA.reports[client.name][mk] : [];
             document.getElementById('clientReportVideoCount').textContent = vids.length;
             if (vids.length > 0) {
-                document.getElementById('clientReportLastDate').textContent = new Date(vids[vids.length-1].fechaEntrega).toLocaleDateString('es-ES');
-                const avg = vids.reduce(function(s,v){return s+Math.floor((new Date(v.fechaEntrega)-new Date(v.uploadedDate))/86400000);},0)/vids.length;
-                document.getElementById('clientReportAvgDays').textContent = avg.toFixed(1);
+                try {
+                    const lastDate = new Date(vids[vids.length-1].fechaEntrega);
+                    document.getElementById('clientReportLastDate').textContent = isNaN(lastDate.getTime()) ? '—' : lastDate.toLocaleDateString('es-ES');
+                    const validVids = vids.filter(function(v){ return v.fechaEntrega && v.uploadedDate; });
+                    if (validVids.length > 0) {
+                        const avg = validVids.reduce(function(s,v){return s+Math.floor((new Date(v.fechaEntrega)-new Date(v.uploadedDate))/86400000);},0)/validVids.length;
+                        document.getElementById('clientReportAvgDays').textContent = isNaN(avg) ? '—' : avg.toFixed(1);
+                    } else {
+                        document.getElementById('clientReportAvgDays').textContent = '—';
+                    }
+                } catch(e) {}
             }
         }
         
