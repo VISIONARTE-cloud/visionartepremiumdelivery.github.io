@@ -1677,7 +1677,7 @@
             const video = (client.videos||[]).find(function(v){ return v.id===videoId; });
             if (!video) { showNotification('Video no encontrado', 'error'); return; }
             if (video.cloudinaryUrl) {
-                forceDownload(video.cloudinaryUrl, videoName, video.size || 0);
+                forceDownload(video.cloudinaryUrl, videoName, video.size || 0, video.storagePath || null);
             } else {
                 getVideoFromIDB(videoId).then(function(blob) {
                     if (!blob) { showNotification('Archivo no encontrado localmente', 'error'); return; }
@@ -1691,82 +1691,65 @@
             }
         }
         
-        // ============ DESCARGA CON PROGRESO (v9.3 - streaming, sin crash de memoria) ============
-        function forceDownload(url, fileName, fileSize) {
-            if (!url) { showNotification('URL del video no disponible', 'error'); return; }
+        // ============ DESCARGA v9.3 FIX — SDK directo, sin CORS ============
+        function forceDownload(url, fileName, fileSize, storagePath) {
+            if (!url && !storagePath) { showNotification('URL del video no disponible', 'error'); return; }
 
             var safeName = (fileName || 'video').replace(/[^a-zA-Z0-9._\- ]/g, '_');
             if (!safeName.match(/\.[a-zA-Z0-9]+$/)) safeName += '.mp4';
 
-            // Crear overlay de progreso
+            // Overlay de progreso
             var existingOverlay = document.getElementById('dlProgressOverlay');
             if (existingOverlay) existingOverlay.remove();
-
             var overlay = document.createElement('div');
             overlay.id = 'dlProgressOverlay';
-            overlay.style.cssText = 'position:fixed;bottom:30px;right:30px;background:rgba(0,0,0,0.95);border:1px solid #ffd700;border-radius:16px;padding:22px 24px;z-index:99999;color:white;min-width:300px;max-width:380px;box-shadow:0 10px 40px rgba(255,215,0,0.2);font-family:Inter,sans-serif;';
-            overlay.innerHTML = '<div style="font-weight:800;color:#ffd700;margin-bottom:6px;font-size:14px;">⬇️ Descargando video</div><div id="dlFileName" style="font-size:12px;color:#bbb;margin-bottom:12px;word-break:break-all;">'+fileName+'</div><div style="background:#222;border-radius:6px;height:8px;overflow:hidden;"><div id="dlBar" style="background:linear-gradient(90deg,#ffd700,#ffed4e);height:100%;width:0%;transition:width 0.2s;border-radius:6px;"></div></div><div id="dlPct" style="font-size:12px;color:#888;margin-top:8px;text-align:center;">Iniciando...</div><button id="dlCancelBtn" onclick="document.getElementById(\'dlProgressOverlay\').remove()" style="margin-top:12px;background:transparent;border:1px solid #444;color:#666;padding:5px 14px;border-radius:8px;cursor:pointer;font-size:11px;width:100%;font-family:Inter,sans-serif;">✕ Cancelar / Cerrar</button>';
+            overlay.style.cssText = 'position:fixed;bottom:30px;right:30px;background:rgba(0,0,0,0.97);border:2px solid #ffd700;border-radius:16px;padding:22px 24px;z-index:99999;color:white;min-width:300px;max-width:380px;box-shadow:0 10px 40px rgba(255,215,0,0.3);font-family:Inter,sans-serif;';
+            overlay.innerHTML = '<div style="font-weight:800;color:#ffd700;margin-bottom:6px;font-size:14px;">⬇️ Descargando video</div><div style="font-size:12px;color:#bbb;margin-bottom:14px;word-break:break-all;">'+fileName+'</div><div id="dlPct" style="font-size:13px;color:#ffd700;text-align:center;margin-bottom:10px;">Preparando enlace...</div><button onclick="document.getElementById(\'dlProgressOverlay\').remove()" style="margin-top:4px;background:transparent;border:1px solid #444;color:#888;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:11px;width:100%;font-family:Inter,sans-serif;">✕ Cerrar</button>';
             document.body.appendChild(overlay);
 
-            var cancelled = false;
-            document.getElementById('dlCancelBtn').onclick = function() { cancelled = true; overlay.remove(); };
+            function setPct(msg) {
+                var el = document.getElementById('dlPct');
+                if (el) el.textContent = msg;
+            }
+            function triggerLink(finalUrl) {
+                setPct('Descarga iniciada ✅');
+                // Método 1: link directo (funciona con Firebase Storage URLs)
+                var a = document.createElement('a');
+                a.href = finalUrl;
+                a.download = safeName;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function() {
+                    if (document.body.contains(a)) document.body.removeChild(a);
+                    setTimeout(function() {
+                        if (document.getElementById('dlProgressOverlay')) overlay.remove();
+                        showNotification('✅ Descarga iniciada: ' + fileName, 'success');
+                    }, 2000);
+                }, 300);
+            }
 
-            // Streaming fetch con progreso real
-            fetch(url, { mode: 'cors' })
-                .then(function(response) {
-                    if (!response.ok) throw new Error('HTTP ' + response.status);
-                    var contentLength = response.headers.get('Content-Length');
-                    var total = contentLength ? parseInt(contentLength, 10) : (fileSize || 0);
-                    var loaded = 0;
-                    var chunks = [];
-                    var reader = response.body.getReader();
-
-                    function pump() {
-                        if (cancelled) return Promise.resolve();
-                        return reader.read().then(function(result) {
-                            if (cancelled) return;
-                            if (result.done) {
-                                // Ensamblar blob y disparar descarga
-                                var blob = new Blob(chunks);
-                                var blobUrl = URL.createObjectURL(blob);
-                                var a = document.createElement('a');
-                                a.href = blobUrl; a.download = safeName; a.style.display = 'none';
-                                document.body.appendChild(a); a.click();
-                                setTimeout(function() {
-                                    document.body.removeChild(a);
-                                    URL.revokeObjectURL(blobUrl);
-                                    if (document.getElementById('dlProgressOverlay')) overlay.remove();
-                                    showNotification('✅ ' + fileName + ' descargado', 'success');
-                                }, 1500);
-                                return;
-                            }
-                            chunks.push(result.value);
-                            loaded += result.value.length;
-                            var pct = total > 0 ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
-                            var dlBar = document.getElementById('dlBar');
-                            var dlPct = document.getElementById('dlPct');
-                            if (dlBar) dlBar.style.width = pct + '%';
-                            if (dlPct) {
-                                var mb = (loaded / 1048576).toFixed(1);
-                                var totalMb = total > 0 ? ' / ' + (total / 1048576).toFixed(0) + ' MB' : '';
-                                dlPct.textContent = pct + '%  —  ' + mb + ' MB' + totalMb;
-                            }
-                            return pump();
-                        });
-                    }
-                    return pump();
-                })
-                .catch(function(err) {
-                    console.error('Streaming download error:', err);
-                    if (document.getElementById('dlProgressOverlay')) overlay.remove();
-                    // Fallback fiable: link directo (Firebase Storage envía Content-Disposition: attachment)
-                    var a = document.createElement('a');
-                    a.href = url; a.download = safeName; a.target = '_blank'; a.rel = 'noopener';
-                    a.style.display = 'none';
-                    document.body.appendChild(a); a.click();
-                    setTimeout(function() { if (document.body.contains(a)) document.body.removeChild(a); }, 500);
-                    showNotification('⬇️ Descarga iniciada en tu navegador', 'success');
-                });
+            // Si tenemos storagePath, obtener URL fresca desde SDK (evita tokens expirados)
+            if (storagePath && STORAGE) {
+                setPct('Obteniendo enlace desde Firebase...');
+                STORAGE.ref(storagePath).getDownloadURL()
+                    .then(function(freshUrl) {
+                        triggerLink(freshUrl);
+                    })
+                    .catch(function(err) {
+                        console.warn('Firebase SDK URL error:', err.code, '— usando URL guardada');
+                        if (url) triggerLink(url);
+                        else {
+                            if (document.getElementById('dlProgressOverlay')) overlay.remove();
+                            showNotification('Error al obtener el video: ' + err.code, 'error');
+                        }
+                    });
+            } else {
+                // URL directa guardada (cloudinaryUrl)
+                triggerLink(url);
+            }
         }
         
         function archiveVideo(clientId, videoId, videoName, element) {
@@ -2419,9 +2402,9 @@
                 var btn = document.createElement('button'); btn.className='btn-video'; btn.textContent='⬇️ Descargar';
                 
                 // Capturamos URL, nombre y tamaño en el closure — sin buscar en DATA al hacer click
-                btn.addEventListener('click', (function(vurl, vname, vsize, vid) {
+                btn.addEventListener('click', (function(vurl, vname, vsize, vid, vpath) {
                     return function() {
-                        if (vurl) {
+                        if (vurl || vpath) {
                             // Registrar descarga
                             var cl = DATA.clients.find(function(c){return c.name===currentUser;});
                             if (cl) {
@@ -2430,12 +2413,12 @@
                                 saveData();
                             }
                             logMovement('⬇️ ' + currentUser + ' descargo: ' + vname);
-                            forceDownload(vurl, vname, vsize);
+                            forceDownload(vurl, vname, vsize, vpath);
                         } else {
                             showNotification('Este video no tiene URL de descarga. Contacta al admin.', 'error');
                         }
                     };
-                })(video.cloudinaryUrl, video.name, video.size || 0, video.id));
+                })(video.cloudinaryUrl, video.name, video.size || 0, video.id, video.storagePath));
                 
                 actionsDiv.appendChild(btn);
                 card.appendChild(nameDiv); card.appendChild(infoDiv); card.appendChild(actionsDiv);
@@ -2469,7 +2452,7 @@
                 client.downloads.push({videoId:videoId,timestamp:new Date().toISOString()});
                 saveData();
                 logMovement('⬇️ '+currentUser+' descargo: '+videoName);
-                forceDownload(video.cloudinaryUrl, videoName, video.size||0);
+                forceDownload(video.cloudinaryUrl, videoName, video.size||0, video.storagePath||null);
             } else {
                 showNotification('Sin URL de descarga. Contacta al admin.', 'error');
             }
